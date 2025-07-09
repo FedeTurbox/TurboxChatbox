@@ -1,0 +1,58 @@
+Chat Hotel Libertadores - Documentación del Proyecto
+
+Descripción General
+
+Este proyecto es una aplicación web que permite a los usuarios enviar consultas al Hotel 5 Libertadores de América y recibir respuestas automáticas. La interfaz es un chat sencillo con diseño moderno. El procesamiento de las consultas se realiza en un servidor Flask, que compara las entradas del usuario con un conjunto de frases predefinidas almacenadas en archivos JSON.
+
+Funcionamiento
+
+1. El usuario accede a la interfaz web y escribe una consulta.
+2. Al enviar la consulta, la aplicación muestra un indicador de carga mientras el servidor procesa la solicitud.
+3. El servidor Flask valida la consulta comparándola con las variaciones disponibles en los archivos JSON.
+4. Si encuentra coincidencias, devuelve la respuesta correspondiente desde un archivo JSON de respuestas. Si no hay coincidencia, devuelve un mensaje de error.
+5. La respuesta se muestra en la conversación del chat.
+
+Dependencias
+
+- Python 3.7 o superior
+- Flask
+- Archivos JSON con las variaciones de consultas y respuestas
+
+Instalación de dependencias:
+pip install flask
+
+Ejecución
+
+1. Colocar los siguientes archivos en la misma carpeta:
+   - app.py
+   - iniciar_chat.bat
+   - Respuestas.json
+   - Archivos JSON con las variaciones de consultas
+   - Carpeta templates con index.html
+   - Carpeta static con style.css
+
+2. Para iniciar el servidor, ejecutar:
+   - Doble clic en iniciar_chat.bat
+   - O desde la terminal:
+     python app.py
+
+3. Abrir en el navegador la URL:
+   http://127.0.0.1:5000
+
+4. Escribir consultas en el chat y recibir respuestas automáticas.
+
+Estructura del Proyecto
+
+/proyecto
+│
+├── app.py
+├── iniciar_chat.bat
+├── Respuestas.json
+├── Variaciones1.json
+├── Variaciones2.json
+│
+├── /templates
+│   └── index.html
+│
+├── /static
+    └── style.css

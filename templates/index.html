@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Chat Hotel Libertadores</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div class="chat-container">
+        <div class="chat-header">Hotel Libertadores de América</div>
+        <div id="chat-log" class="chat-log"></div>
+        <div class="chat-input">
+            <input type="text" id="consulta" placeholder="Escribe tu consulta...">
+            <button onclick="enviarConsulta()">Enviar</button>
+        </div>
+    </div>
+    <script>
+        const input = document.getElementById("consulta");
+
+        async function enviarConsulta() {
+            const mensaje = input.value.trim();
+            if (!mensaje) return;
+
+            agregarMensaje("Tú", mensaje);
+            input.value = "";
+
+            // Mostrar indicador de carga (spinner)
+            const escribiendoMsg = agregarLoader();
+
+            try {
+                const response = await fetch("/consulta", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ consulta: mensaje })
+                });
+                const data = await response.json();
+
+                // Reemplazar spinner con la respuesta real
+                escribiendoMsg.querySelector(".burbuja").textContent = data.respuesta;
+
+            } catch (error) {
+                escribiendoMsg.querySelector(".burbuja").textContent = "Error al obtener respuesta.";
+            }
+
+            input.focus();
+        }
+
+        function agregarMensaje(remitente, texto) {
+            const log = document.getElementById("chat-log");
+            const msg = document.createElement("div");
+            msg.className = "mensaje fade " + (remitente === "Tú" ? "usuario" : "bot");
+
+            const bubble = document.createElement("div");
+            bubble.className = "burbuja";
+            bubble.textContent = texto;
+
+            msg.appendChild(bubble);
+            log.appendChild(msg);
+            log.scrollTop = log.scrollHeight;
+            return msg;
+        }
+
+        function agregarLoader() {
+            const log = document.getElementById("chat-log");
+            const msg = document.createElement("div");
+            msg.className = "mensaje fade bot";
+
+            const bubble = document.createElement("div");
+            bubble.className = "burbuja";
+
+            const loader = document.createElement("div");
+            loader.className = "loader";
+
+            bubble.appendChild(loader);
+            msg.appendChild(bubble);
+            log.appendChild(msg);
+            log.scrollTop = log.scrollHeight;
+            return msg;
+        }
+
+        input.addEventListener("keydown", function(event) {
+            if (event.key === "Enter") {
+                event.preventDefault();
+                enviarConsulta();
+            }
+        });
+
+        window.onload = () => input.focus();
+    </script>
+</body>
+</html>
