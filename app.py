@@ -12,8 +12,21 @@ class ValidadorConsultas:
     def __init__(self):
         self.archivos_json = self.encontrar_archivos_json()
         self.variaciones = self.cargar_variaciones_de_todos_archivos()
-        self.umbral_coincidencia = 0.9
+        self.umbral_coincidencia = 0.9  # UMBRAL DE SENSIBILIDAD
         self.palabras_clave_archivos = self.extraer_palabras_clave()
+        self.exclusiones = self.cargar_exclusiones()
+
+    def cargar_exclusiones(self):
+        try:
+            with open("Exclusiones.json", 'r', encoding='utf-8') as f:
+                data = json.load(f)
+                return {
+                    "inicio": [self.normalizar_texto(frase, limpiar_exclusiones=False) for frase in data.get("inicio", [])],
+                    "palabras": [self.normalizar_texto(palabra, limpiar_exclusiones=False) for palabra in data.get("palabras", [])]
+                }
+        except (FileNotFoundError, json.JSONDecodeError):
+            print("⚠️ Exclusiones.json no encontrado o con errores. Continuando sin exclusiones.")
+            return {"inicio": [], "palabras": []}
 
     def extraer_palabras_clave(self):
         palabras_clave = {}
@@ -24,8 +37,7 @@ class ValidadorConsultas:
         return palabras_clave
 
     def encontrar_archivos_json(self):
-        archivos = glob.glob('*.json')
-        return archivos
+        return glob.glob('*.json')
 
     def cargar_variaciones_de_todos_archivos(self):
         todas_variaciones = []
@@ -39,24 +51,24 @@ class ValidadorConsultas:
                 continue
         return todas_variaciones
 
-    def normalizar_texto(self, texto):
+    def normalizar_texto(self, texto, limpiar_exclusiones=True):
         texto = unicodedata.normalize('NFKD', texto.lower())
         texto = ''.join(c for c in texto if not unicodedata.combining(c))
         texto = texto.strip("¿¡").strip("?¡!.,").strip()
 
-        # Si la consulta tiene más de 15 caracteres, eliminar "gracias" y "por favor" con variantes
-        if len(texto) > 15:
-            # Expresiones regulares para detectar variantes de "gracias" y "por favor"
-            patrones = [
-                r"\bgr(a|á|à|ä|â)s?i(a|á|à|ä|â)?s\b",         # gracias, grasias, grásias, etc.
-                r"\bpor\s*f(a|á|à|ä|â)v(a|á|à|ä|â)?(o|u)r\b", # por favor, porfabor, porfvor, etc.
-                r"\bporfavor\b"                              # porfavor pegado
-            ]
-            for patron in patrones:
+        if limpiar_exclusiones and hasattr(self, "exclusiones"):
+            # Limpiar frases de inicio si la consulta es larga
+            if len(texto) > 15:
+                for frase in self.exclusiones["inicio"]:
+                    if texto.startswith(frase):
+                        texto = texto[len(frase):].strip()
+
+            # Limpiar palabras sueltas en cualquier parte
+            for palabra in self.exclusiones["palabras"]:
+                patron = r"\b{}\b".format(re.escape(palabra))
                 texto = re.sub(patron, "", texto, flags=re.IGNORECASE)
 
-            texto = " ".join(texto.split())  # Quitar espacios duplicados
-
+        texto = " ".join(texto.split())  # Quitar espacios extra
         return texto
 
     def calcular_ajuste_archivo(self, consulta_norm, archivo):

@@ -2,31 +2,31 @@ import json
 import random
 from collections import defaultdict
 
-def generar_variaciones_pregunta(n_perfectas=100, n_aleatorias=1000, archivo_salida="preguntas.json"):
-    # Componentes para variantes de "tengo una pregunta"
+def generar_variaciones_recorridos(n_perfectas=100, n_aleatorias=1000, archivo_salida="recorridos.json"):
+    # Componentes para variantes de "ofrecen recorridos turísticos"
     componentes = {
         "inicio": {
-            "tengo": 5, "me surge": 3, "quisiera hacer": 3,
-            "quería": 4, "puedo hacer": 3, "hay": 2, "necesito hacer": 2
+            "ofrecen": 5, "disponen de": 4, "cuentan con": 4,
+            "hay": 3, "se puede": 2, "proporcionan": 3
         },
         "objeto": {
-            "una pregunta": 5, "una duda": 4, "una consulta": 4,
-            "un comentario": 2, "algo que preguntar": 2
-        },
-        "extra": {
-            "rápida": 2, "importante": 2, "": 6
+            "recorridos turísticos": 5, "visitas guiadas": 4,
+            "guía turístico": 3, "excursiones": 4, "tours": 3
         },
         "cierre": {
-            "?": 5, "??": 2, "...": 2, "": 3
+            "?": 6, "??": 2, "...": 2, "": 3
         }
     }
 
     # Errores típicos en palabras y puntuación
     errores_palabras = {
-        "tengo": ["tngo", "tnego"],
-        "pregunta": ["pregnta", "preguta"],
-        "duda": ["ddua", "duada"],
-        "consulta": ["consuta", "consulata"]
+        "ofrecen": ["ofresen", "offrecen"],
+        "disponen": ["dispnen", "dispenen"],
+        "cuentan": ["cuntan", "cuetan"],
+        "recorridos": ["recoridos", "recorrdos"],
+        "turísticos": ["turisticos", "tursiticos"],
+        "guiadas": ["guadas", "guiads"],
+        "excursiones": ["excurciones", "excurciones"]
     }
     errores_puntuacion = ["??", "...", "?!", ".", ""]
 
@@ -48,9 +48,9 @@ def generar_variaciones_pregunta(n_perfectas=100, n_aleatorias=1000, archivo_sal
         )[0]
 
     estructuras_perfectas = [
-        "{inicio} {objeto} {extra}{cierre}",
         "{inicio} {objeto}{cierre}",
-        "{inicio} {objeto} {extra}{cierre}"
+        "¿{inicio} {objeto}{cierre}",
+        "{inicio} {objeto} {cierre}"
     ]
 
     perfectas = []
@@ -62,7 +62,6 @@ def generar_variaciones_pregunta(n_perfectas=100, n_aleatorias=1000, archivo_sal
         params = {
             "inicio": seleccionar_proporcional("inicio"),
             "objeto": seleccionar_proporcional("objeto"),
-            "extra": seleccionar_proporcional("extra"),
             "cierre": seleccionar_proporcional("cierre")
         }
 
@@ -80,11 +79,10 @@ def generar_variaciones_pregunta(n_perfectas=100, n_aleatorias=1000, archivo_sal
         params = {
             "inicio": seleccionar_proporcional("inicio"),
             "objeto": seleccionar_proporcional("objeto"),
-            "extra": seleccionar_proporcional("extra"),
             "cierre": seleccionar_proporcional("cierre")
         }
 
-        frase = f"{params['inicio']} {params['objeto']} {params['extra']}{params['cierre']}".strip()
+        frase = f"{params['inicio']} {params['objeto']}{params['cierre']}".strip()
 
         # Aplicar errores en palabras
         if random.random() < 0.3:
@@ -126,4 +124,4 @@ def generar_variaciones_pregunta(n_perfectas=100, n_aleatorias=1000, archivo_sal
             print(f"  {pal}: Esperado {peso/sum(palabras.values()):.1%}, Actual {uso:.1%}")
 
 if __name__ == "__main__":
-    generar_variaciones_pregunta()
+    generar_variaciones_recorridos()
