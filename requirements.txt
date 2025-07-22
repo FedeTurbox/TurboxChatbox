@@ -1,2 +1,4 @@
-Flask==3.0.3
+fastapi
+uvicorn
 gunicorn==21.2.0
+Flask==3.0.3
