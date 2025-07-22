@@ -1,0 +1,45 @@
+## Documentación del programa de generación de saludos
+
+### 📄 Descripción
+
+Este programa genera automáticamente variaciones de frases de saludo en formato JSON y copia el script Python actual en una carpeta de entrenamiento. También solicita una respuesta asociada al conjunto de saludos y la guarda en un archivo `Respuestas.json`.
+
+### 📦 Estructura de carpetas
+
+* **Consultas/**: Contiene los archivos JSON generados con las frases.
+* **Training/**: Contiene las copias del script Python para cada conjunto generado.
+* **Respuestas.json**: Archivo en la carpeta principal que almacena las respuestas asociadas a cada conjunto (QX).
+
+### 🔥 Funcionamiento
+
+1. Genera un identificador incremental `(QX)` en base a los archivos JSON existentes en la carpeta `Consultas`.
+2. Crea frases "perfectas" únicas a partir de una lista base de saludos.
+3. Genera frases "con errores" aplicando variaciones (errores ortográficos y de mayúsculas).
+4. Guarda los resultados en un archivo JSON en la carpeta `Consultas`.
+5. Copia el script Python en la carpeta `Training` con el mismo nombre base que el JSON.
+6. Solicita al usuario que ingrese una respuesta asociada al conjunto generado y la guarda en `Respuestas.json`.
+
+### 📁 Archivos generados
+
+* `Consultas/(QX), saludos, hola, buenas.json`
+* `Training/(QX), saludos, hola, buenas.py`
+* `Respuestas.json`:
+
+  ```json
+  {
+    "Respuestas": {
+      "Q1": "Respuesta asociada al primer conjunto",
+      "Q2": "Respuesta asociada al segundo conjunto"
+    }
+  }
+  ```
+
+### ✅ Dependencias
+
+* Python 3.x
+* Módulos estándar: `json`, `random`, `os`, `glob`, `re`, `shutil`
+
+### 📌 Notas
+
+* Las carpetas `Consultas` y `Training` se crean automáticamente si no existen.
+* Si `Respuestas.json` no existe, el programa lo crea.

@@ -1,5 +1,5 @@
 @echo off
-title Chat Hotel Libertadores - Servidor
+title Eugenia
 
 :: Cambiar a la carpeta del script
 cd /d "%~dp0"
@@ -12,9 +12,16 @@ if errorlevel 1 (
     exit /b
 )
 
-:: Ejecutar app.py
-echo Iniciando servidor Flask...
-start "" http://127.0.0.1:5000
+:: Verificar si uvicorn está instalado
+python -c "import uvicorn" 2>nul
+if errorlevel 1 (
+    echo Uvicorn no está instalado. Ejecuta: pip install fastapi uvicorn
+    pause
+    exit /b
+)
+
+:: Iniciar el servidor
+echo Iniciando servidor FastAPI...
 python app.py
 
 pause

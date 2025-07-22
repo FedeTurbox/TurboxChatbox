@@ -2,20 +2,41 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Chat Hotel Libertadores</title>
+    <title>{{ langui.get("ChatTitle", "Asistente Virtual") }}</title>
     <link rel="stylesheet" href="/static/style.css">
+    <style>
+        .admin-icon {
+            position: fixed;
+            top: 15px;
+            right: 15px;
+            font-size: 2rem;
+            color: #333;
+            cursor: pointer;
+            z-index: 1000;
+        }
+        .admin-icon:hover {
+            color: #555;
+        }
+    </style>
 </head>
 <body>
+    <!-- ⚙️ Icono fijo para admin -->
+    <a href="/admin" class="admin-icon" title="Panel de administración">⚙️</a>
+
     <div class="chat-container">
-        <div class="chat-header">Hotel Libertadores de América</div>
+        <div class="chat-header">{{ langui.get("ChatHeader", "Bienvenido al chat") }}</div>
         <div id="chat-log" class="chat-log"></div>
         <div class="chat-input">
-            <input type="text" id="consulta" placeholder="Escribe tu consulta...">
-            <button onclick="enviarConsulta()">Enviar</button>
+            <input type="text" id="consulta" placeholder="{{ langui.get('Escriba', 'Escriba su mensaje...') }}">
+            <button id="btnEnviar">{{ langui.get('Enviar', 'Enviar') }}</button>
         </div>
     </div>
+
     <script>
         const input = document.getElementById("consulta");
+        const btnEnviar = document.getElementById("btnEnviar");
+
+        btnEnviar.addEventListener("click", enviarConsulta);
 
         async function enviarConsulta() {
             const mensaje = input.value.trim();
@@ -24,7 +45,6 @@
             agregarMensaje("Tú", mensaje);
             input.value = "";
 
-            // Mostrar indicador de carga (spinner)
             const escribiendoMsg = agregarLoader();
 
             try {
@@ -34,10 +54,7 @@
                     body: JSON.stringify({ consulta: mensaje })
                 });
                 const data = await response.json();
-
-                // Reemplazar spinner con la respuesta real
                 escribiendoMsg.querySelector(".burbuja").textContent = data.respuesta;
-
             } catch (error) {
                 escribiendoMsg.querySelector(".burbuja").textContent = "Error al obtener respuesta.";
             }
