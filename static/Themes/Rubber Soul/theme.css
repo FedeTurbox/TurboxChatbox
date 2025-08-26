@@ -1,0 +1,41 @@
+/* static/Themes/Soul/theme.css */
+:root {
+    /* --- Tipografía --- */
+    --font-principal: 'IBM Plex Sans', sans-serif; /* CORREGIDO: Fuente unificada */
+
+    /* --- Colores Base (Paleta Rubber Soul) --- */
+    --color-fondo: #04180c;             /* Verde muy oscuro (para fondo de chat) */
+    --color-contenedor: #186052;        /* Verde azulado (para contenedor de chat) */
+    --color-fondo-oscuro: #04180c;       /* Mismo verde oscuro (para fondo de admin) */
+    --color-fondo-claro: #186052;        /* Mismo verde azulado (para contenedor de admin) */
+    --color-borde: #000000;              /* Borde negro */
+    --color-texto-principal: #F0F0F0;    /* Texto principal claro */
+    --color-texto-secundario: #a0b5ab;   /* Texto secundario verde grisáceo */
+    
+    /* --- Colores de Acento --- */
+    --color-primario: #c95c19;           /* Naranja, color principal */
+    --color-primario-hover: #e07b39;
+    --color-primario-activo: #b34a0e;
+
+    /* === COLORES DE BURBUJA ADAPTADOS === */
+    --color-burbuja-bot: #c95c19; 
+    --color-burbuja-usuario: #08533e; 
+
+    /* --- Colores de Inputs y Texto --- */
+    --color-input-fondo: #3a3319;        /* Oliva oscuro */
+    --color-input-texto: #F0F0F0;        /* Texto claro para el input */
+    --color-texto-blanco: #FFFFFF;
+    
+    /* --- Otros colores funcionales (para admin y chat) --- */
+    --sombra-caja: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05);
+    --color-exito: #41AA29;
+    --color-exito-hover: #63C04F;
+    --color-exito-activo: #358A21;
+    --color-peligro: #ef1921;
+    --color-peligro-hover: #f2474d;
+    --color-peligro-activo: #d90a11;
+    --color-mensaje-exito-fondo: #166534;
+    --color-mensaje-exito-borde: #22c55e;
+    --color-mensaje-error-fondo: #991b1b;
+    --color-mensaje-error-borde: #ef4444;
+}

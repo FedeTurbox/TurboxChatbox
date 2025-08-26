@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, HTTPException, UploadFile, File
 from fastapi.responses import JSONResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
@@ -7,279 +7,449 @@ import glob
 from difflib import SequenceMatcher
 import unicodedata
 import re
-import webbrowser
-import threading
-import uvicorn
 import os
+import shutil # Importar la librería shutil
+
+# --- Nuevas importaciones para la IA y scripts locales ---
+from sentence_transformers import SentenceTransformer, util
+import torch
+from generador_lib import ejecutar_generacion
+from Eliminar_Clave import ejecutar_eliminacion
+import nltk # <--- AÑADIDO PARA LA DIVISIÓN INTELIGENTE
+
 if os.name == 'nt':
-    os.system('')  # Activa colores ANSI en cmd de Windows
+    os.system('')
 
 app = FastAPI()
 
-# Montar carpeta de templates y static
 templates = Jinja2Templates(directory="templates")
+# Montamos el directorio 'static' completo
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
-# ╔═══════════════════════════════════════════╗
-# ║              CONFIGURACIÓN                ║
-# ╚═══════════════════════════════════════════╝
-
-VERBOSE = True                     # ✅ Activa o desactiva logs de debug
-UMBRAL_COINCIDENCIA = 0.65         # 🎯 Coincidencia mínima (70%)
-EARLY_STOP_THRESHOLD = 94.0        # 🚀 Detener búsqueda si >= 94%
-BLOQUE_TAMANO = 30                 # 📦 Tamaño de bloque para búsqueda intercalada
-
-# 🎨 Colores ANSI para logs
-GREEN = "\033[92m"
-YELLOW = "\033[93m"
-RED = "\033[91m"
-CYAN = "\033[96m"
-RESET = "\033[0m"
-
-#..............................................................................
-
-def debug_log(msg, color=None):
-    if VERBOSE:
-        if color:
-            print(f"{color}{msg}{RESET}")
-        else:
-            print(msg)
-
-def cargar_langui():
-    try:
-        with open("LangUI.json", 'r', encoding='utf-8') as f:
-            return json.load(f)
-    except (FileNotFoundError, json.JSONDecodeError):
-        debug_log("⚠️ LangUI.json no encontrado o inválido. Usando valores por defecto.", color=YELLOW)
-        return {}
-
-class ValidadorConsultas:
-    def __init__(self):
-        self.carpeta_consultas = os.path.join(os.getcwd(), "Consultas")
-        self.archivos_json = self.encontrar_archivos_json()
-        self.variaciones = self.cargar_variaciones_de_todos_archivos()
-        self.umbral_coincidencia = UMBRAL_COINCIDENCIA
-        self.exclusiones = self.cargar_exclusiones()
-        debug_log(f"📂 {len(self.archivos_json)} archivos JSON cargados", color=CYAN)
-        debug_log(f"📝 {len(self.variaciones)} frases cargadas", color=CYAN)
-        debug_log(f"⚙️  Umbral de coincidencia base: {self.umbral_coincidencia * 100:.1f}%", color=CYAN)
-
-    def cargar_exclusiones(self):
+# --- Funciones para manejar la configuración del tema ---
+def get_instance_config(instance_id: int) -> dict:
+    """Carga la configuración de una instancia, incluyendo el tema."""
+    instance_path = os.path.join("Instancias", str(instance_id))
+    config_path = os.path.join(instance_path, "config.json")
+    if os.path.exists(config_path):
         try:
-            with open("Exclusiones.json", 'r', encoding='utf-8') as f:
-                data = json.load(f)
-                return {
-                    "inicio": [self.normalizar_texto(frase, False) for frase in data.get("inicio", [])],
-                    "palabras": [self.normalizar_texto(palabra, False) for palabra in data.get("palabras", [])]
-                }
-        except (FileNotFoundError, json.JSONDecodeError):
-            return {"inicio": [], "palabras": []}
+            with open(config_path, 'r', encoding='utf-8') as f:
+                return json.load(f)
+        except (json.JSONDecodeError, FileNotFoundError):
+            pass
+    # Devuelve una configuración por defecto si no existe o hay error
+    return {"theme": "Moderno"} # ACTUALIZADO: El valor por defecto ahora es "Moderno"
 
-    def encontrar_archivos_json(self):
-        return glob.glob(os.path.join(self.carpeta_consultas, "*.json"))
+def save_instance_config(instance_id: int, config: dict):
+    """Guarda la configuración de una instancia."""
+    instance_path = os.path.join("Instancias", str(instance_id))
+    os.makedirs(instance_path, exist_ok=True)
+    config_path = os.path.join(instance_path, "config.json")
+    with open(config_path, 'w', encoding='utf-8') as f:
+        json.dump(config, f, ensure_ascii=False, indent=2)
 
-    def cargar_variaciones_de_todos_archivos(self):
-        todas_variaciones = []
-        for archivo in self.archivos_json:
-            try:
-                with open(archivo, 'r', encoding='utf-8') as f:
-                    data = json.load(f)
-                    todas_variaciones.extend(data.get("perfectas", []))
-                    todas_variaciones.extend(data.get("con_errores", []))
-            except json.JSONDecodeError:
+def get_available_themes() -> list:
+    """Escanea el directorio de temas y devuelve una lista de los disponibles."""
+    themes_dir = os.path.join("static", "Themes")
+    if not os.path.isdir(themes_dir):
+        return []
+    return [d for d in os.listdir(themes_dir) if os.path.isdir(os.path.join(themes_dir, d))]
+
+# --- Lógica de la IA y el Validador ---
+
+class AIResponder:
+    """
+    Gestiona la carga del modelo de IA y la búsqueda de respuestas semánticas
+    en un documento de texto.
+    """
+    def __init__(self, instance_path):
+        self.device = "cuda" if torch.cuda.is_available() else "cpu"
+        print(f"🤖 AIResponder: Usando dispositivo '{self.device}'.")
+        model_name = 'paraphrase-multilingual-MiniLM-L12-v2'
+        try:
+            self.model = SentenceTransformer(model_name, device=self.device)
+            print(f"✅ Modelo de IA '{model_name}' cargado correctamente.")
+        except Exception as e:
+            self.model = None
+            print(f"❌ ERROR al cargar el modelo de IA: {e}")
+            return
+        self.document_path = os.path.join(instance_path, 'informacion_adicional.txt')
+        self.corpus_chunks = []
+        self.corpus_embeddings = None
+        self._load_and_process_document()
+
+    def _split_into_chunks(self, text: str, max_chunk_length: int = 600) -> list[str]:
+        """
+        Divide el texto en fragmentos (chunks) de manera más inteligente.
+        Primero divide por párrafos. Si un párrafo es demasiado largo,
+        lo subdivide en grupos de oraciones.
+        """
+        try:
+            nltk.data.find('tokenizers/punkt')
+        except LookupError:
+            print("📥 Descargando tokenizador de oraciones de NLTK ('punkt')...")
+            nltk.download('punkt', quiet=True)
+
+        text = text.replace('\r\n', '\n')
+        initial_chunks = re.split(r'\n{2,}', text)
+        
+        final_chunks = []
+        for chunk in initial_chunks:
+            chunk = chunk.strip()
+            if len(chunk) == 0:
                 continue
-        return todas_variaciones
-
-    def normalizar_texto(self, texto, limpiar_exclusiones=True):
-        texto = unicodedata.normalize('NFKD', texto.lower())
-        texto = ''.join(c for c in texto if not unicodedata.combining(c))
-        texto = texto.strip("¿¡?¡!.,").strip()
-        if limpiar_exclusiones:
-            palabras = texto.split()
-            palabras = [p for p in palabras if p not in self.exclusiones["palabras"]]
-            texto = " ".join(palabras)
-        return texto
-
-    def comparar_textos(self, texto1, texto2):
-        clean1 = re.sub(r"[\s¿¡?.,!]", "", texto1)
-        clean2 = re.sub(r"[\s¿¡?.,!]", "", texto2)
-        ratio_chars = SequenceMatcher(None, clean1, clean2).ratio()
-        set1 = set(texto1.split())
-        set2 = set(texto2.split())
-        interseccion = set1 & set2
-        ratio_palabras = len(interseccion) / max(len(set2), 1)
-        return max(ratio_chars, ratio_palabras)
-
-    def ordenar_archivos_por_prioridad(self, consulta):
-        consulta_norm = self.normalizar_texto(consulta)
-        prioritarios = []
-        no_prioritarios = []
-
-        for archivo in self.archivos_json:
-            archivo_nombre = os.path.basename(archivo)
-            archivo_nombre_limpio = re.sub(r"\(Q\d+\),\s*", "", archivo_nombre).replace(".json", "")
-            frases_clave = [
-                self.normalizar_texto(p.strip(), limpiar_exclusiones=False)
-                for p in archivo_nombre_limpio.split(",")
-                if p.strip() and not p.startswith("(Q")
-            ]
-            if any(frase in consulta_norm for frase in frases_clave):
-                prioritarios.append(archivo)
+            
+            if len(chunk) > max_chunk_length:
+                print(f"쪼개기 Chunk demasiado largo ({len(chunk)} chars). Dividiendo en oraciones...")
+                sentences = nltk.sent_tokenize(chunk, language='spanish')
+                current_sub_chunk = ""
+                for sentence in sentences:
+                    if len(current_sub_chunk) + len(sentence) + 1 < max_chunk_length:
+                        current_sub_chunk += sentence + " "
+                    else:
+                        if current_sub_chunk:
+                            final_chunks.append(current_sub_chunk.strip())
+                        current_sub_chunk = sentence + " "
+                if current_sub_chunk:
+                    final_chunks.append(current_sub_chunk.strip())
             else:
-                no_prioritarios.append(archivo)
+                final_chunks.append(chunk)
 
-        debug_log(f"📦 Archivos prioritarios: {len(prioritarios)} / Total: {len(self.archivos_json)}", color=CYAN)
-        if prioritarios:
-            debug_log("📑 Lista de archivos prioritarios:", color=YELLOW)
-            for p in prioritarios:
-                debug_log(f"   - {os.path.basename(p)}", color=YELLOW)
+        meaningful_chunks = [c for c in final_chunks if len(c) > 20]
+        print(f"📝 Texto dividido en {len(meaningful_chunks)} fragmentos finales.")
+        return meaningful_chunks
 
-        return prioritarios + no_prioritarios
+    def _load_and_process_document(self):
+        if not self.model or not os.path.exists(self.document_path): return
+        try:
+            with open(self.document_path, 'r', encoding='utf-8') as f:
+                content = f.read()
+            
+            self.corpus_chunks = self._split_into_chunks(content)
+            
+            if not self.corpus_chunks: 
+                print("⚠️ No se encontraron fragmentos de texto significativos en el documento.")
+                return
 
-    def buscar_coincidencia(self, consulta):
-        coincidencias = []
-        archivos_ordenados = self.ordenar_archivos_por_prioridad(consulta)
-        debug_log(f"🔄 Procesando archivos en bloques de {BLOQUE_TAMANO}", color=CYAN)
+            print(f"📚 Procesando {len(self.corpus_chunks)} fragmentos del documento de conocimiento...")
+            self.corpus_embeddings = self.model.encode(self.corpus_chunks, convert_to_tensor=True, device=self.device)
+            print("👍 Documento de conocimiento procesado y listo para consultas.")
+        except Exception as e:
+            print(f"❌ ERROR procesando el documento de IA: {e}")
 
-        for i in range(0, len(archivos_ordenados), BLOQUE_TAMANO):
-            bloque = archivos_ordenados[i:i+BLOQUE_TAMANO]
-            for archivo in bloque:
-                try:
-                    with open(archivo, 'r', encoding='utf-8') as f:
-                        data = json.load(f)
-                        variantes = data.get("perfectas", []) + data.get("con_errores", [])
-                        for variante in variantes:
-                            contiene_exclusiones = any(
-                                palabra in self.normalizar_texto(variante, limpiar_exclusiones=False).split()
-                                for palabra in self.exclusiones["palabras"]
-                            )
-                            consulta_norm = self.normalizar_texto(consulta, limpiar_exclusiones=not contiene_exclusiones)
-                            variante_norm = self.normalizar_texto(variante, limpiar_exclusiones=False)
-                            similitud = self.comparar_textos(consulta_norm, variante_norm)
+    def _normalize_for_boost(self, text: str) -> str:
+        """
+        Normalización simplificada para la comparación de títulos.
+        Convierte a minúsculas, elimina acentos y puntuación.
+        """
+        text_norm = unicodedata.normalize('NFKD', text.lower()).encode('ascii', 'ignore').decode('utf-8', 'ignore')
+        text_norm = re.sub(r'[^\w\s]', '', text_norm)
+        return text_norm
 
-                            nombre_archivo = os.path.basename(archivo)
-                            frases_clave = [
-                                self.normalizar_texto(p.strip(), limpiar_exclusiones=False)
-                                for p in nombre_archivo.split(",")
-                                if p.strip() and not p.startswith("(Q")
-                            ]
-                            frases_encontradas = [f for f in frases_clave if f in consulta_norm]
-                            bonus = len(frases_encontradas) * 0.2
+    def answer_question(self, question, top_k=5, score_threshold=0.30, title_boost=0.25):
+        """
+        Busca una respuesta combinando búsqueda semántica con un impulso de puntuación
+        para las coincidencias de título, solucionando el sesgo hacia fragmentos más largos.
+        """
+        if self.corpus_embeddings is None or not self.corpus_chunks: return None
 
-                            if frases_encontradas:
-                                debug_log(f"⭐ Frases clave coincidentes: {frases_encontradas} (+{bonus*100:.1f}%)", color=YELLOW)
+        question_embedding = self.model.encode(question, convert_to_tensor=True, device=self.device)
+        
+        hits = util.semantic_search(question_embedding, self.corpus_embeddings, top_k=top_k)[0]
+        
+        if not hits:
+            return None
 
-                            indice_final = (similitud + bonus) * 100
-                            color = GREEN if indice_final > 100 else YELLOW if indice_final >= 77 else RED
-                            debug_log(
-                                f"   → Comparando con: '{variante}' en {nombre_archivo}\n"
-                                f"     Índice base: {similitud*100:.2f}% | Índice FINAL (con bonus): {indice_final:.2f}%",
-                                color=color
-                            )
+        # --- Lógica de Re-ranking con Impulso de Título ---
+        boosted_hits = []
+        normalized_question_words = set(self._normalize_for_boost(question).split())
 
-                            coincidencias.append({
-                                "variante": variante,
-                                "archivo": archivo,
-                                "puntaje": indice_final / 100
-                            })
+        for hit in hits:
+            chunk_text = self.corpus_chunks[hit['corpus_id']]
+            # Considera las primeras 7 palabras como el "título" del fragmento
+            chunk_title_words = set(self._normalize_for_boost(chunk_text).split()[:7])
+            
+            # Si TODAS las palabras de la consulta están en el título del fragmento, aplica un impulso fuerte
+            if normalized_question_words.issubset(chunk_title_words):
+                boosted_score = hit['score'] + title_boost
+                print(f"🚀 Impulso FUERTE aplicado a '{chunk_text[:30]}...' de {hit['score']:.2f} a {boosted_score:.2f}")
+                hit['score'] = boosted_score
+            
+            boosted_hits.append(hit)
 
-                            if indice_final >= EARLY_STOP_THRESHOLD:
-                                debug_log(f"🚀 Early stop: coincidencia ≥{EARLY_STOP_THRESHOLD}% encontrada.", color=GREEN)
-                                return {
-                                    "variante": variante,
-                                    "archivo": archivo,
-                                    "puntaje": indice_final / 100
-                                }
-                except json.JSONDecodeError:
-                    continue
+        # Vuelve a ordenar los resultados con las puntuaciones actualizadas
+        sorted_hits = sorted(boosted_hits, key=lambda x: x['score'], reverse=True)
 
-        coincidencias.sort(key=lambda x: x["puntaje"], reverse=True)
-        if coincidencias:
-            mejor = coincidencias[0]
-            color = GREEN if mejor['puntaje']*100 > 100 else YELLOW
-            debug_log(f"✅ Mejor coincidencia: '{mejor['variante']}' ({mejor['puntaje']*100:.2f}%) en {os.path.basename(mejor['archivo'])}", color=color)
-        else:
-            debug_log("❌ No se encontraron coincidencias.", color=RED)
+        print(f"🔍 Resultados Re-clasificados: {[ (h['score'], self.corpus_chunks[h['corpus_id']][:40] + '...') for h in sorted_hits]}")
 
-        return coincidencias[0] if coincidencias else None
-
-    def obtener_respuesta(self, archivo):
-        match = re.search(r"\((Q\d+)\)", archivo)
-        if match:
-            clave = match.group(1)
-            try:
-                with open("Respuestas.json", 'r', encoding='utf-8') as f:
-                    data = json.load(f)
-                    return data.get("Respuestas", {}).get(clave)
-            except (FileNotFoundError, json.JSONDecodeError):
-                return None
+        # Devuelve el mejor resultado si supera el umbral de confianza
+        best_hit = sorted_hits[0]
+        if best_hit['score'] > score_threshold:
+            print(f"✅ Coincidencia final encontrada con puntaje {best_hit['score']:.2f}")
+            return self.corpus_chunks[best_hit['corpus_id']]
+        
+        print(f"❌ Ninguna coincidencia superó el umbral de {score_threshold}. La mejor fue de {best_hit['score']:.2f}")
         return None
 
-    def validar_consulta(self, consulta):
-        resultado = self.buscar_coincidencia(consulta)
-        langui = cargar_langui()
-        if resultado:
-            indice_pct = resultado["puntaje"] * 100
-            if indice_pct >= 100 or indice_pct >= self.umbral_coincidencia * 100:
-                debug_log(f"🎯 Coincidencia aceptada: {indice_pct:.2f}%", color=GREEN if indice_pct >= 100 else YELLOW)
-                respuesta = self.obtener_respuesta(resultado["archivo"])
-                return respuesta or langui.get("NoSabe", "Lo siento. No dispongo de esa información.")
-            else:
-                debug_log(f"❌ Coincidencia insuficiente: {indice_pct:.2f}% < {self.umbral_coincidencia*100:.1f}%", color=RED)
-        else:
-            debug_log("❌ Ninguna coincidencia encontrada.", color=RED)
-        return langui.get("NoSabe", "Lo siento. No dispongo de esa información.")
+class ValidadorConsultas:
+    """
+    Gestiona la lógica de validación de consultas basada en reglas (archivos JSON).
+    Ahora recibe una instancia de AIResponder en lugar de crearla.
+    """
+    def __init__(self, instance_id: int, ai_responder: AIResponder):
+        self.instance_id = instance_id
+        self.instance_path = os.path.join(os.getcwd(), "Instancias", str(instance_id))
+        self.exclusiones = self._load_json_global("Exclusiones.json")
+        self.respuestas = self._load_json_instancia("Respuestas.json").get("Respuestas", {})
+        self.ai_responder = ai_responder
 
-validador = ValidadorConsultas()
+    def _load_json_global(self, filename):
+        path = os.path.join(os.getcwd(), filename)
+        try:
+            with open(path, 'r', encoding='utf-8') as f:
+                return json.load(f)
+        except (FileNotFoundError, json.JSONDecodeError):
+            return {}
 
-#..............................................................................
+    def _load_json_instancia(self, filename):
+        path = os.path.join(self.instance_path, filename)
+        if not os.path.exists(path): return {}
+        try:
+            with open(path, 'r', encoding='utf-8') as f:
+                return json.load(f)
+        except (FileNotFoundError, json.JSONDecodeError):
+            return {}
 
-@app.get("/", response_class=HTMLResponse)
-async def index(request: Request):
-    langui = cargar_langui()
-    return templates.TemplateResponse("index.html", {"request": request, "langui": langui})
+    def normalizar_texto(self, texto, limpiar_exclusiones=True):
+        texto_norm = unicodedata.normalize('NFKD', texto.lower()).encode('ascii', 'ignore').decode('utf-8', 'ignore')
+        texto_norm = texto_norm.strip("¿¡?¡!.,").strip()
+        if limpiar_exclusiones:
+            palabras = texto_norm.split()
+            palabras_excluir = self.exclusiones.get("palabras", [])
+            palabras = [p for p in palabras if p not in palabras_excluir]
+            texto_norm = " ".join(palabras)
+        return texto_norm
 
-@app.post("/consulta")
-async def consulta(data: dict):
-    consulta_texto = data.get("consulta", "")
-    respuesta = validador.validar_consulta(consulta_texto)
-    return JSONResponse({"respuesta": respuesta})
+    def comparar_textos(self, texto1, texto2):
+        return SequenceMatcher(None, texto1, texto2).ratio()
 
-@app.get("/admin", response_class=HTMLResponse)
-async def admin(request: Request):
-    langui = cargar_langui()
-    try:
-        with open("Respuestas.json", 'r', encoding='utf-8') as f:
-            respuestas = json.load(f).get("Respuestas", {})
-    except (FileNotFoundError, json.JSONDecodeError):
-        respuestas = {}
-    try:
-        with open("Lang.json", 'r', encoding='utf-8') as f:
-            lang = json.load(f)
-    except (FileNotFoundError, json.JSONDecodeError):
-        lang = {}
-    return templates.TemplateResponse("admin.html", {
-        "request": request,
-        "respuestas": respuestas,
-        "lang": lang,
-        "langui": langui
+    def buscar_coincidencia_reglas(self, consulta):
+        consulta_norm = self.normalizar_texto(consulta)
+        mejor_coincidencia = {"puntaje": 0}
+        
+        carpeta_consultas = os.path.join(self.instance_path, "Consultas")
+        if not os.path.isdir(carpeta_consultas): return None
+
+        for archivo_path in glob.glob(os.path.join(carpeta_consultas, "*.json")):
+            try:
+                with open(archivo_path, 'r', encoding='utf-8') as f:
+                    data = json.load(f)
+                variantes = data.get("perfectas", []) + data.get("con_errores", [])
+                for variante in variantes:
+                    variante_norm = self.normalizar_texto(variante, False)
+                    similitud = self.comparar_textos(consulta_norm, variante_norm)
+                    if similitud > mejor_coincidencia["puntaje"]:
+                        mejor_coincidencia = {"variante": variante, "archivo": archivo_path, "puntaje": similitud}
+            except (json.JSONDecodeError, FileNotFoundError):
+                continue
+        
+        return mejor_coincidencia if mejor_coincidencia["puntaje"] > 0.65 else None
+
+    def obtener_respuesta_reglas(self, archivo):
+        match = re.search(r"\((Q\d+)\)", archivo)
+        if match:
+            clave_q = match.group(1)
+            return self.respuestas.get(clave_q)
+        return None
+
+    def procesar_consulta(self, consulta):
+        if not os.path.isdir(self.instance_path):
+            langui = self._load_json_global("LangUI.json")
+            return langui.get("NoSabe", "No he podido encontrar una respuesta.")
+
+        resultado_reglas = self.buscar_coincidencia_reglas(consulta)
+        langui = self._load_json_global("LangUI.json")
+        
+        if resultado_reglas:
+            respuesta = self.obtener_respuesta_reglas(resultado_reglas["archivo"])
+            return respuesta or langui.get("NoSabe", "Respuesta para la regla no encontrada.")
+        
+        respuesta_ia = self.ai_responder.answer_question(consulta)
+        if respuesta_ia:
+            return respuesta_ia
+        
+        return langui.get("NoSabe", "No he podido encontrar una respuesta.")
+
+# --- Dos cachés separadas para la IA y las reglas ---
+ai_responders_cache = {}
+validadores_cache = {}
+
+def get_ai_responder(instance_id: int) -> AIResponder:
+    """Crea o recupera un AIResponder de la caché."""
+    if instance_id not in ai_responders_cache:
+        print(f"🧠 Creando y cacheando AIResponder para la instancia {instance_id}...")
+        instance_path = os.path.join(os.getcwd(), "Instancias", str(instance_id))
+        ai_responders_cache[instance_id] = AIResponder(instance_path)
+    return ai_responders_cache[instance_id]
+
+def get_validador(instance_id: int) -> ValidadorConsultas:
+    """Crea o recupera un ValidadorConsultas de la caché, inyectando el AIResponder cacheado."""
+    if instance_id not in validadores_cache:
+        print(f"룰 Creando y cacheando ValidadorConsultas para la instancia {instance_id}...")
+        ai_responder = get_ai_responder(instance_id)
+        validadores_cache[instance_id] = ValidadorConsultas(instance_id, ai_responder)
+    return validadores_cache[instance_id]
+
+# --- ENDPOINTS ---
+
+@app.get("/{instance_id}", response_class=HTMLResponse)
+async def read_root(request: Request, instance_id: int):
+    validador = get_validador(instance_id)
+    langui = validador._load_json_global("LangUI.json")
+    config = get_instance_config(instance_id)
+    selected_theme = config.get("theme", "Moderno") # ACTUALIZADO
+    return templates.TemplateResponse("index.html", {
+        "request": request, 
+        "langui": langui, 
+        "instance_id": instance_id,
+        "selected_theme": selected_theme
     })
 
-@app.post("/guardar_respuestas")
-async def guardar_respuestas(data: dict):
-    nuevas_respuestas = data.get("respuestas", {})
+@app.post("/{instance_id}/consulta")
+async def consulta(instance_id: int, data: dict):
+    validador = get_validador(instance_id)
+    consulta_texto = data.get("consulta", "")
+    respuesta = validador.procesar_consulta(consulta_texto)
+    return JSONResponse({"respuesta": respuesta})
+
+@app.get("/{instance_id}/admin", response_class=HTMLResponse)
+async def admin(request: Request, instance_id: int):
+    validador = get_validador(instance_id)
+    respuestas = validador.respuestas
+    lang = validador._load_json_instancia("Lang.json")
+    langui = validador._load_json_global("LangUI.json")
+    
+    claves_ordenadas = sorted(respuestas.keys(), key=lambda q: int(re.sub(r'\D', '', q)))
+    respuestas_ordenadas = {k: respuestas[k] for k in claves_ordenadas}
+    
+    config = get_instance_config(instance_id)
+    selected_theme = config.get("theme", "Moderno") # ACTUALIZADO
+    available_themes = get_available_themes()
+    
+    return templates.TemplateResponse("admin.html", {
+        "request": request,
+        "respuestas": respuestas_ordenadas,
+        "lang": lang,
+        "langui": langui,
+        "instance_id": instance_id,
+        "selected_theme": selected_theme,
+        "available_themes": available_themes
+    })
+
+@app.post("/{instance_id}/admin/guardar")
+async def guardar_configuracion(instance_id: int, data: dict):
+    instance_path = os.path.join("Instancias", str(instance_id))
+    if not os.path.isdir(instance_path):
+        raise HTTPException(status_code=404, detail=f"La instancia {instance_id} no existe.")
+
     try:
-        with open("Respuestas.json", 'w', encoding='utf-8') as f:
-            json.dump({"Respuestas": nuevas_respuestas}, f, ensure_ascii=False, indent=2)
-        return JSONResponse({"status": "success", "message": "Respuestas guardadas correctamente."})
+        if "respuestas" in data:
+            nuevas_respuestas = data.get("respuestas", {})
+            respuestas_path = os.path.join(instance_path, "Respuestas.json")
+            respuestas_data = {"Respuestas": {}}
+            if os.path.exists(respuestas_path):
+                with open(respuestas_path, 'r', encoding='utf-8') as f:
+                    try:
+                        respuestas_data = json.load(f)
+                    except json.JSONDecodeError:
+                        pass
+            
+            if "Respuestas" not in respuestas_data or not isinstance(respuestas_data["Respuestas"], dict):
+                respuestas_data["Respuestas"] = {}
+            respuestas_data["Respuestas"].update(nuevas_respuestas)
+            with open(respuestas_path, 'w', encoding='utf-8') as f:
+                json.dump(respuestas_data, f, ensure_ascii=False, indent=2)
+
+        if "theme" in data:
+            nuevo_tema = data.get("theme")
+            if nuevo_tema and nuevo_tema in get_available_themes():
+                config = get_instance_config(instance_id)
+                config["theme"] = nuevo_tema
+                save_instance_config(instance_id, config)
+        
+        if instance_id in validadores_cache:
+            print(f"♻️  Limpiando caché de Validador (instancia {instance_id}) por guardado de configuración.")
+            del validadores_cache[instance_id]
+            
+        return JSONResponse({"status": "success", "message": "Configuración guardada correctamente."})
     except Exception as e:
         return JSONResponse({"status": "error", "message": str(e)}, status_code=500)
 
-#..............................................................................
+@app.post("/{instance_id}/admin/upload_info")
+async def upload_info(instance_id: int, file: UploadFile = File(...)):
+    instance_path = os.path.join("Instancias", str(instance_id))
+    os.makedirs(instance_path, exist_ok=True)
 
-def abrir_navegador():
-    webbrowser.open_new("http://127.0.0.1:5000")
+    if file.content_type != 'text/plain':
+        raise HTTPException(status_code=400, detail="El archivo debe ser de tipo .txt")
 
-if __name__ == "__main__":
-    threading.Timer(1.0, abrir_navegador).start()
-    uvicorn.run("app:app", host="127.0.0.1", port=5000, reload=True)
+    file_path = os.path.join(instance_path, "informacion_adicional.txt")
+    
+    try:
+        with open(file_path, "wb") as buffer:
+            shutil.copyfileobj(file.file, buffer)
+        
+        if instance_id in validadores_cache:
+            print(f"♻️  Limpiando caché de Validador (instancia {instance_id}) por subida de archivo de conocimiento.")
+            del validadores_cache[instance_id]
+        if instance_id in ai_responders_cache:
+            print(f"♻️  Limpiando caché de AIResponder (instancia {instance_id}) por subida de archivo de conocimiento.")
+            del ai_responders_cache[instance_id]
+            
+        return JSONResponse({
+            "status": "success",
+            "message": "Archivo de conocimiento actualizado correctamente"
+        })
+    except Exception as e:
+        return JSONResponse({
+            "status": "error",
+            "message": f"No se pudo guardar el archivo: {e}"
+        }, status_code=500)
+
+@app.post("/{instance_id}/admin/generar")
+async def generar_nueva_consulta(instance_id: int, data: dict):
+    frase_base = data.get("frase_base")
+    respuesta_base = data.get("respuesta_base")
+
+    if not frase_base or not respuesta_base:
+        raise HTTPException(status_code=400, detail="La frase base y la respuesta no pueden estar vacías.")
+
+    descripcion_usuario = frase_base
+    respuesta_inicial = respuesta_base
+    
+    resultado = ejecutar_generacion(
+        instance_id=instance_id,
+        frase_base=frase_base,
+        respuesta_usuario=respuesta_inicial,
+        descripcion_usuario=descripcion_usuario
+    )
+    
+    if resultado.get("status") == "success":
+        if instance_id in validadores_cache:
+            print(f"♻️  Limpiando caché de Validador (instancia {instance_id}) por generación de nueva consulta.")
+            del validadores_cache[instance_id]
+        return JSONResponse(resultado)
+    else:
+        raise HTTPException(status_code=500, detail=resultado.get("message", "Error desconocido durante la generación."))
+
+@app.delete("/{instance_id}/admin/eliminar/{clave_q}")
+async def eliminar_consulta(instance_id: int, clave_q: str):
+    resultado = ejecutar_eliminacion(instance_id, clave_q)
+    
+    if resultado.get("status") == "success":
+        if instance_id in validadores_cache:
+            print(f"♻️  Limpiando caché de Validador (instancia {instance_id}) por eliminación de consulta.")
+            del validadores_cache[instance_id]
+        return JSONResponse(resultado)
+    else:
+        raise HTTPException(status_code=500, detail=resultado.get("message", "Error durante la eliminación."))

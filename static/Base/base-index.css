@@ -1,0 +1,170 @@
+/* --- Variables CSS por Defecto (Fallback) --- */
+:root {
+    --font-principal: 'IBM Plex Sans', sans-serif;
+    --color-fondo: #111827;
+    --color-contenedor: #1f2937;
+    --color-borde: #374151;
+    --color-texto-principal: #f9fafb;
+    --color-texto-secundario: #9ca3af;
+    --color-primario: #3b82f6;
+    --color-primario-hover: #60a5fa;
+    --color-secundario: #8b5cf6; /* Añadido para fallback */
+    
+    /* Colores de burbujas actualizados */
+    --color-burbuja-bot: var(--color-primario); /* Bot ahora es azul */
+    --color-burbuja-usuario: var(--color-secundario); /* Usuario ahora es morado */
+    
+    --color-input-fondo: #111827;
+    --color-input-texto: #f9fafb;
+    --color-texto-blanco: #ffffff;
+    --sombra-caja: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05);
+}
+
+body {
+    background-color: var(--color-fondo);
+    color: var(--color-texto-principal);
+    font-family: var(--font-principal);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    margin: 0;
+}
+
+.chat-container {
+    background-color: var(--color-contenedor);
+    border-radius: 12px;
+    width: 400px;
+    max-width: 90%;
+    box-shadow: var(--sombra-caja);
+    display: flex;
+    flex-direction: column;
+}
+
+.chat-header {
+    background-color: var(--color-primario);
+    color: var(--color-texto-blanco);
+    padding: 12px;
+    border-radius: 12px 12px 0 0;
+    text-align: center;
+    font-weight: bold;
+    font-size: 1.2em;
+}
+
+.chat-log {
+    height: 400px;
+    overflow-y: auto;
+    padding: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.mensaje {
+    display: flex;
+    animation: fadeIn 0.3s ease forwards;
+}
+
+.mensaje.usuario {
+    justify-content: flex-end;
+}
+
+.mensaje.bot {
+    justify-content: flex-start;
+}
+
+.burbuja {
+    max-width: 70%;
+    padding: 10px 14px;
+    border-radius: 18px;
+    line-height: 1.4;
+    word-wrap: break-word;
+    position: relative;
+}
+
+.mensaje.bot .burbuja {
+    background-color: var(--color-burbuja-bot);
+    color: var(--color-texto-blanco); /* Texto blanco para mejor contraste */
+}
+
+.mensaje.usuario .burbuja {
+    background-color: var(--color-burbuja-usuario);
+    color: var(--color-texto-blanco);
+}
+
+
+.chat-input {
+    display: flex;
+    padding: 10px;
+    border-top: 1px solid var(--color-borde);
+    gap: 8px;
+}
+
+.chat-input input {
+    flex: 1;
+    padding: 10px;
+    border: 1px solid var(--color-borde);
+    border-radius: 18px;
+    outline: none;
+    background-color: var(--color-input-fondo);
+    color: var(--color-input-texto);
+    transition: border-color 0.2s ease;
+}
+
+.chat-input input:focus {
+    border-color: var(--color-primario);
+}
+
+.chat-input button {
+    padding: 10px 20px;
+    background-color: var(--color-primario);
+    border: none;
+    border-radius: 18px;
+    color: var(--color-texto-blanco);
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.2s ease, transform 0.1s ease;
+}
+
+.chat-input button:hover {
+    background-color: var(--color-primario-hover);
+}
+
+.chat-input button:active {
+    transform: scale(0.98);
+}
+
+.loader {
+    border: 4px solid var(--color-borde);
+    border-top: 4px solid var(--color-primario);
+    border-radius: 50%;
+    width: 18px;
+    height: 18px;
+    animation: spin 1s linear infinite;
+    margin: auto;
+}
+
+.admin-icon {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    font-size: 24px;
+    color: var(--color-texto-secundario);
+    cursor: pointer;
+    z-index: 1000;
+    text-decoration: none;
+    transition: color 0.2s ease;
+}
+.admin-icon:hover {
+    color: var(--color-texto-principal);
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}

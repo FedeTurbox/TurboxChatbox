@@ -1,0 +1,54 @@
+/* static/Themes/Claro/theme.css */
+:root {
+    /* --- Tipografía --- */
+    --font-principal: 'IBM Plex Sans', sans-serif;
+
+    /* --- Colores Base (Unificados para Chat y Admin) --- */
+    --color-fondo: #ffffff;             /* Fondo principal del chat (Blanco) */
+    --color-contenedor: #f3f4f6;        /* Contenedor del chat (Gris claro) */
+    --color-fondo-oscuro: #ffffff;      /* Fondo del admin (Blanco) */
+    --color-fondo-claro: #f3f4f6;       /* Contenedor del admin (Gris claro) */
+    --color-borde: #e5e7eb;             /* Borde (Gris más claro) */
+    --color-texto-principal: #111827;   /* Texto principal (Oscuro) */
+    --color-texto-secundario: #6b7280;  /* Texto secundario (Gris medio) */
+    --color-texto-blanco: #ffffff;      /* Texto para burbujas y botones */
+    --color-input-fondo: #ffffff;       /* Fondo del campo de texto (Blanco) */
+    --color-input-texto: #111827;       /* Texto del campo de texto (Oscuro) */
+    
+    /* --- Colores de Acento --- */
+    --color-primario: #3b82f6;          /* Azul (Botón de envío, burbuja del bot) */
+    --color-primario-hover: #60a5fa;
+    --color-primario-activo: #2563eb;
+    --color-secundario: #8b5cf6;         /* Púrpura (Burbuja del usuario) */
+    --color-exito: #10b981;             /* Verde para éxito (Admin) */
+    --color-exito-hover: #34d399;
+    --color-exito-activo: #059669;
+    --color-peligro: #ef4444;           /* Rojo para peligro (Admin) */
+    --color-peligro-hover: #f87171;
+    --color-peligro-activo: #dc2626;
+
+    /* --- Colores Específicos del Chat --- */
+    --color-burbuja-bot: var(--color-primario); 
+    --color-burbuja-usuario: var(--color-secundario); 
+    --sombra-caja: 0 10px 15px -3px rgba(0,0,0,0.07), 0 4px 6px -2px rgba(0,0,0,0.04);
+
+    /* --- Colores de Mensajes (para Admin) --- */
+    --color-mensaje-exito-fondo: #dcfce7;
+    --color-mensaje-exito-borde: var(--color-exito);
+    --color-mensaje-error-fondo: #fee2e2;
+    --color-mensaje-error-borde: var(--color-peligro);
+}
+
+/* --- Degradado para el encabezado del chat --- */
+.chat-header {
+    background: linear-gradient(to right, var(--color-primario), var(--color-secundario));
+}
+
+/* --- Sobrescritura para legibilidad en tema claro --- */
+.container select, .container .form-select {
+    background-image: url("data:image/svg+xml;utf8,<svg fill='black' height='20' viewBox='0 0 24 24' width='20' xmlns='http://www.w3.org/2000/svg'><path d='M7 10l5 5 5-5z'/></svg>") !important;
+}
+
+.response-item {
+    background-color: #ffffff;
+}

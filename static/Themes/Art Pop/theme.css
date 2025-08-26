@@ -1,0 +1,48 @@
+/* static/Themes/ArtPop/theme.css */
+:root {
+    /* --- Tipografía --- */
+    --font-principal: 'IBM Plex Sans', sans-serif;
+
+    /* --- Colores Base (Paleta Art Pop) --- */
+    --color-fondo: #2E294E;             /* Índigo profundo (para fondo de chat) */
+    --color-contenedor: #3A355A;        /* Gris azulado oscuro (para contenedor de chat) */
+    --color-fondo-oscuro: #2E294E;       /* Mismo índigo (para fondo de admin) */
+    --color-fondo-claro: #3A355A;        /* Mismo gris azulado (para contenedor de admin) */
+    --color-borde: #5C5580;              /* Borde más claro */
+    --color-texto-principal: #F0F0F0;    /* Texto principal claro */
+    --color-texto-secundario: #B0A8D0;   /* Texto secundario lavanda */
+    
+    /* --- Colores de Acento --- */
+    --color-primario: #E0115F;           /* Fucsia/Rosa principal */
+    --color-primario-hover: #f3387f;
+    --color-primario-activo: #A00B47;
+
+    /* === COLORES DE BURBUJA ADAPTADOS === */
+    --color-burbuja-bot: #E0115F; 
+    --color-burbuja-usuario: #FFD700; 
+
+    /* --- Colores de Inputs y Texto --- */
+    --color-input-fondo: #4A4570;        /* Fondo de input más claro */
+    --color-input-texto: #F0F0F0;        /* Texto de input claro */
+    --color-texto-blanco: #FFFFFF;
+    --color-texto-oscuro: #1A1A1A;       /* Texto oscuro para elementos claros */
+    
+    /* --- Otros colores funcionales (para admin y chat) --- */
+    --sombra-caja: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05);
+    --color-exito: #22C55E;
+    --color-exito-hover: #4ADE80;
+    --color-exito-activo: #16A34A;
+    --color-peligro: #FF312E;
+    --color-peligro-hover: #FF6B6B;
+    --color-peligro-activo: #CC0000;
+    --color-mensaje-exito-fondo: #166534;
+    --color-mensaje-exito-borde: #22c55e;
+    --color-mensaje-error-fondo: #991b1b;
+    --color-mensaje-error-borde: #ef4444;
+}
+
+/* --- Sobrescritura para legibilidad --- */
+/* Asegura que el texto en la burbuja del usuario (amarilla) sea oscuro para mejor contraste */
+.mensaje.usuario .burbuja {
+    color: var(--color-texto-oscuro) !important;
+}

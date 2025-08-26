@@ -1,0 +1,91 @@
+{
+  "curated_synonyms": {
+    "verbos_intencion": {
+      "quiero": ["deseo", "quisiera", "necesito", "me gustaría"],
+      "quisiera": ["quiero", "deseo", "necesito", "me gustaría"],
+      "deseo": ["quiero", "quisiera", "necesito", "me gustaría"],
+      "necesito": ["quiero", "quisiera", "deseo", "me gustaría"],
+      "saber": ["conocer", "averiguar", "consultar"],
+      "conocer": ["saber", "averiguar", "consultar"]
+    },
+    "verbos_accion_estado": {
+      "tienen": ["cuentan con", "disponen de", "ofrecen", "poseen"],
+      "tiene": ["cuenta con", "dispone de", "ofrece", "posee"],
+      "hay": ["tienen", "disponen de", "ofrecen"],
+      "reservar": ["agendar", "anotar", "guardar un lugar"],
+      "comprar": ["adquirir", "obtener", "conseguir", "llevarme"],
+      "adquirir": ["comprar", "obtener", "conseguir", "llevarme"],
+      "obtener": ["comprar", "adquirir", "conseguir", "llevarme"],
+      "sale": ["cuesta", "vale"],
+      "cuesta": ["sale", "vale"],
+      "vale": ["cuesta", "sale"]
+    },
+    "sustantivos_objetos": {
+      "articulo": ["producto", "ítem", "objeto"],
+      "producto": ["articulo", "ítem", "objeto"],
+      "menu": ["carta", "opciones de comida"]
+    },
+    "sustantivos_lugares": {
+      "piscina": ["pileta", "alberca"],
+      "pileta": ["piscina", "alberca"],
+      "hotel": ["alojamiento", "establecimiento", "hospedaje"],
+      "habitaciones": ["cuartos", "dormitorios", "alcobas"],
+      "habitacion": ["cuarto", "dormitorio", "alcoba"]
+    },
+    "sustantivos_conceptos": {
+      "informacion": ["datos", "detalles", "referencias"],
+      "direccion": ["ubicación", "domicilio"],
+      "ubicacion": ["dirección", "domicilio"],
+      "precio": ["costo", "valor", "tarifa"],
+      "costo": ["precio", "valor", "tarifa"],
+      "valor": ["precio", "costo", "tarifa"],
+      "disponibilidad": ["lugar", "espacio", "sitio"],
+      "horario": ["horas de atención", "cronograma"],
+      "reserva": ["reservación", "cita"]
+    }
+  },
+  "question_templates": {
+    "cual": [
+      "Cuál es {sujeto}",
+      "Me podrías decir {sujeto}",
+      "Quisiera saber {sujeto}"
+    ],
+    "cuál": [
+      "Cuál es {sujeto}",
+      "Me podrías decir {sujeto}",
+      "Quisiera saber {sujeto}"
+    ],
+    "donde": [
+      "Dónde está {sujeto}",
+      "En qué lugar se encuentra {sujeto}",
+      "Me indicas la ubicación de {sujeto}"
+    ],
+    "dónde": [
+      "Dónde está {sujeto}",
+      "En qué lugar se encuentra {sujeto}",
+      "Me indicas la ubicación de {sujeto}"
+    ],
+    "cuanto": [
+      "Cuánto cuesta {sujeto}",
+      "Cuánto vale {sujeto}",
+      "Qué precio tiene {sujeto}",
+      "A cuánto está {sujeto}"
+    ],
+    "cuánto": [
+      "Cuánto cuesta {sujeto}",
+      "Cuánto vale {sujeto}",
+      "Qué precio tiene {sujeto}",
+      "A cuánto está {sujeto}"
+    ],
+    "hay": [
+      "Hay {sujeto}",
+      "Tienen {sujeto}",
+      "Disponen de {sujeto}"
+    ],
+    "tienen": [
+      "Tienen {sujeto}",
+      "Ofrecen {sujeto}",
+      "Cuentan con {sujeto}"
+    ]
+  }
+}

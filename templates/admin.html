@@ -2,52 +2,439 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Administrador de Respuestas</title>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <title>Administrador de Instancia {{ instance_id }}</title>
+    
+    <!-- Importar la fuente IBM Plex Sans -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;700&display=swap" rel="stylesheet">
+    
+    <!-- Importar los íconos de Material Design -->
+    <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
+
+    <!-- 1. Carga la ESTRUCTURA base del admin -->
+    <link rel="stylesheet" href="/static/Base/base-admin.css">
+    <!-- 2. Carga los COLORES Y FUENTES del tema seleccionado -->
+    <link rel="stylesheet" href="/static/Themes/{{ selected_theme }}/theme.css">
+
+    <!-- Estilos para la animación de carga y modales -->
+    <style>
+        .loader {
+            border: 4px solid var(--color-borde, #334155);
+            border-top: 4px solid var(--color-primario, #3b82f6);
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin: auto;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        /* Estilos para el modal de confirmación personalizado */
+        .custom-modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.6);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 2000;
+        }
+        .custom-modal-content {
+            background-color: var(--color-fondo-claro);
+            padding: 25px;
+            border-radius: 12px;
+            border: 1px solid var(--color-borde);
+            text-align: center;
+            max-width: 400px;
+            width: 90%;
+        }
+        .custom-modal-content p {
+            color: var(--color-texto-principal);
+            margin-bottom: 20px;
+        }
+        .custom-modal-buttons button {
+            margin: 0 10px;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        .custom-modal-buttons .confirm-btn {
+            background-color: var(--color-peligro);
+            color: var(--color-texto-blanco);
+        }
+        .custom-modal-buttons .cancel-btn {
+            background-color: var(--color-borde);
+            color: var(--color-texto-principal);
+        }
+
+        /* --- Estilos para Notificaciones (Toasts) --- */
+        #notification-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            align-items: flex-end;
+        }
+        .toast-notification {
+            background-color: var(--color-exito, #00E676);
+            color: var(--color-texto-blanco, #FFFFFF);
+            padding: 15px 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            min-width: 250px;
+            max-width: 350px;
+            animation: slideInDown 0.4s ease-out forwards;
+        }
+        .toast-notification.hide {
+            animation: slideOutUp 0.4s ease-in forwards;
+        }
+        @keyframes slideInDown {
+            from {
+                transform: translateY(-120%);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+        @keyframes slideOutUp {
+            from {
+                transform: translateY(0);
+                opacity: 1;
+            }
+            to {
+                transform: translateY(-120%);
+                opacity: 0;
+            }
+        }
+    </style>
+
 </head>
-<body class="p-4">
+<body>
+    <div id="notification-container"></div>
     <div class="container">
-        <h1 class="mb-4">Administrador de Respuestas</h1>
-        <form id="respuestasForm">
-            <div id="respuestasContainer">
-                {% for clave, texto in respuestas.items() %}
-                <div class="mb-3">
-                    <label class="form-label fw-bold">
-                        {{ lang.get(clave, "Descripción no encontrada") }}
-                    </label>
-                    <textarea class="form-control" name="{{ clave }}" rows="2">{{ texto }}</textarea>
-                </div>
-                {% endfor %}
+        <!-- CONTENEDOR FLEXIBLE PARA EL TÍTULO Y EL BOTÓN DE CIERRE -->
+        <div class="window-header">
+            <!-- TÍTULO DEL PANEL -->
+            <h1 class="window-title">Configuración</h1>
+            <!-- BOTÓN DE CIERRE -->
+            <a href="/{{ instance_id }}" class="admin-close-button" title="Ir al Chat">
+                <span class="material-symbols-outlined">close</span>
+            </a>
+        </div>
+        
+        <!-- SECCIÓN: Configuración Visual -->
+        <div class="form-section">
+            <h2>Tema Visual</h2>
+            <div class="mb-3">
+                <select class="form-select" id="theme_selector" name="theme" aria-label="Selector de Tema Visual">
+                    {% for theme_name in available_themes %}
+                        <option value="{{ theme_name }}" {% if theme_name == selected_theme %}selected{% endif %}>
+                            {{ theme_name }}
+                        </option>
+                    {% endfor %}
+                </select>
             </div>
-            <button type="submit" class="btn btn-primary">💾 Guardar cambios</button>
-        </form>
-        <div id="alerta" class="mt-3"></div>
+        </div>
+
+        <!-- Sección para Generar Nueva Consulta -->
+        <div class="form-section generar-consulta-section">
+            <h2>Añadir Nueva Consulta</h2>
+            <form id="generarForm">
+                <div class="mb-3">
+                    <label for="frase_base" class="form-label">Pregunta</label>
+                    <input type="text" class="form-control" id="frase_base" name="frase_base" placeholder="Ej: Cuál es el horario de la piscina">
+                </div>
+                <!-- CAMBIO: Campo para la respuesta añadido -->
+                <div class="mb-3">
+                    <label for="respuesta_base" class="form-label">Respuesta</label>
+                    <textarea class="form-control" id="respuesta_base" name="respuesta_base" rows="2" placeholder="Ej: La piscina abre de 9 a 18 hs."></textarea>
+                </div>
+                <div class="button-wrapper">
+                    <!-- CAMBIO: Botón deshabilitado por defecto -->
+                    <button type="submit" class="btn btn-info" id="btnGenerar" disabled>Generar Nueva Consulta</button>
+                    <div class="loader" id="generarLoader" style="display: none;"></div>
+                </div>
+            </form>
+            <div id="alerta-generacion" class="mt-3 alert" style="display: none;"></div>
+        </div>
+
+        <!-- Sección para Editar Respuestas (Desplegable) -->
+        <div class="form-section">
+            <details open>
+                <summary>Editar Respuestas</summary>
+                <div class="details-content">
+                    <form id="respuestasForm">
+                        <div id="respuestasContainer">
+                            {% for clave, texto_respuesta in respuestas.items() %}
+                            <div class="response-item" id="consulta-{{ clave }}">
+                                <div class="query-header">
+                                    <h5 class="query-title">{{ lang.get(clave, 'Pregunta no encontrada (' + clave + ')') }}</h5>
+                                    <button type="button" class="btn-icon-delete" data-clave="{{ clave }}">
+                                        <span class="material-symbols-outlined">delete_forever</span>
+                                    </button>
+                                </div>
+                                <div>
+                                    <label class="form-label fw-bold">Respuesta del Bot</label>
+                                    <textarea class="form-control" name="resp_{{ clave }}" rows="2">{{ texto_respuesta }}</textarea>
+                                </div>
+                            </div>
+                            {% else %}
+                            <p class="text-muted">No hay consultas definidas para esta instancia.</p>
+                            {% endfor %}
+                        </div>
+                    </form>
+                    <div id="alerta" class="mt-3 alert" style="display: none;"></div>
+                </div>
+            </details>
+        </div>
+
+        <!-- Sección para Importar Base de Conocimiento -->
+        <div class="form-section no-border">
+            <h2>Importar Base de Conocimiento (IA)</h2>
+            <form id="uploadForm" enctype="multipart/form-data">
+                <label for="info_file" class="form-label">Selecciona un archivo <code>.txt</code></label>
+                <div class="file-input-container">
+                    <div class="custom-file-input">
+                        <input type="file" id="info_file" name="info_file" accept=".txt" required>
+                        <label for="info_file" class="file-input-label">
+                            <span class="file-name-display">Ningún archivo seleccionado...</span>
+                            <span class="file-browse-button">Explorar</span>
+                        </label>
+                    </div>
+                    <button type="submit" class="btn-icon-upload" id="btnUpload" title="Subir archivo">
+                        <span class="material-symbols-outlined">upload</span>
+                    </button>
+                </div>
+            </form>
+            <div id="alerta-upload" class="mt-3 alert" style="display: none;"></div>
+        </div>
+
+        <!-- Botón de Guardar Configuración General -->
+        <div class="button-group main-submit-group">
+            <button type="submit" form="respuestasForm" class="btn btn-success" id="btnGuardar">Guardar Configuración</button>
+        </div>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
     <script>
-        document.getElementById("respuestasForm").addEventListener("submit", function(e) {
-            e.preventDefault();
-            let respuestas = {};
-            document.querySelectorAll("#respuestasContainer textarea").forEach(textarea => {
-                let clave = textarea.name.trim();
-                respuestas[clave] = textarea.value.trim();
+        document.addEventListener('DOMContentLoaded', function () {
+            const instanceId = {{ instance_id }};
+
+            // --- Función para mostrar alertas de error contextuales ---
+            function showAlert(elementId, message) {
+                const alertElement = document.getElementById(elementId);
+                alertElement.textContent = message;
+                alertElement.className = 'alert alert-danger';
+                alertElement.style.display = 'block';
+                setTimeout(() => {
+                    alertElement.style.display = 'none';
+                }, 4000);
+            }
+            
+            // --- Función para notificaciones animadas de éxito ---
+            function showNotification(message, type = 'success') {
+                const container = document.getElementById('notification-container');
+                if (!container) return;
+
+                const notification = document.createElement('div');
+                notification.className = `toast-notification ${type}`;
+                notification.textContent = message;
+
+                container.appendChild(notification);
+                
+                setTimeout(() => {
+                    notification.classList.add('hide');
+                    notification.addEventListener('animationend', () => {
+                        notification.remove();
+                    });
+                }, 3000);
+            }
+
+            // --- Función para mostrar modal de confirmación personalizado ---
+            function showCustomConfirm(message, onConfirm) {
+                const overlay = document.createElement('div');
+                overlay.className = 'custom-modal-overlay';
+
+                overlay.innerHTML = `
+                    <div class="custom-modal-content">
+                        <p>${message}</p>
+                        <div class="custom-modal-buttons">
+                            <button class="confirm-btn">Confirmar</button>
+                            <button class="cancel-btn">Cancelar</button>
+                        </div>
+                    </div>
+                `;
+
+                const confirmBtn = overlay.querySelector('.confirm-btn');
+                const cancelBtn = overlay.querySelector('.cancel-btn');
+
+                confirmBtn.onclick = () => {
+                    onConfirm();
+                    overlay.remove();
+                };
+
+                cancelBtn.onclick = () => {
+                    overlay.remove();
+                };
+
+                document.body.appendChild(overlay);
+            }
+
+
+            // --- 1. Guardar Respuestas y Tema ---
+            document.getElementById('respuestasForm').addEventListener('submit', async function (e) {
+                e.preventDefault();
+                const formData = new FormData(this);
+                const respuestas = {};
+                for (let [key, value] of formData.entries()) {
+                    if (key.startsWith('resp_')) {
+                        respuestas[key.substring(5)] = value;
+                    }
+                }
+                
+                const selectedTheme = document.getElementById('theme_selector').value;
+
+                const payload = {
+                    respuestas: respuestas,
+                    theme: selectedTheme
+                };
+
+                try {
+                    const response = await fetch(`/${instanceId}/admin/guardar`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+                    const result = await response.json();
+                    if (response.ok) {
+                        showNotification('¡Configuración guardada con éxito!');
+                        setTimeout(() => location.reload(), 1000);
+                    } else {
+                        throw new Error(result.message || 'Error desconocido');
+                    }
+                } catch (error) {
+                    showAlert('alerta', `Error al guardar: ${error.message}`);
+                }
             });
 
-            axios.post("/guardar_respuestas", {respuestas})
-                .then(response => {
-                    mostrarAlerta("✅ " + response.data.message, "alert-success");
-                })
-                .catch(error => {
-                    mostrarAlerta("❌ Error: " + error.response.data.message, "alert-danger");
-                });
-        });
+            // --- 2. Generar Nueva Consulta ---
+            // CAMBIO: Lógica para habilitar/deshabilitar el botón de generar
+            const fraseBaseInput = document.getElementById('frase_base');
+            const respuestaBaseInput = document.getElementById('respuesta_base');
+            const generarBtn = document.getElementById('btnGenerar');
 
-        function mostrarAlerta(mensaje, clase) {
-            const alerta = document.getElementById("alerta");
-            alerta.className = `alert ${clase}`;
-            alerta.textContent = mensaje;
-        }
+            function toggleGenerarButtonState() {
+                const isFraseEmpty = fraseBaseInput.value.trim() === '';
+                const isRespuestaEmpty = respuestaBaseInput.value.trim() === '';
+                generarBtn.disabled = isFraseEmpty || isRespuestaEmpty;
+            }
+
+            fraseBaseInput.addEventListener('input', toggleGenerarButtonState);
+            respuestaBaseInput.addEventListener('input', toggleGenerarButtonState);
+            
+            document.getElementById('generarForm').addEventListener('submit', async function(e) {
+                e.preventDefault();
+                const fraseBase = fraseBaseInput.value;
+                const respuestaBase = respuestaBaseInput.value;
+
+                const generarLoader = document.getElementById('generarLoader');
+
+                generarBtn.style.display = 'none';
+                generarLoader.style.display = 'block';
+
+                try {
+                    const response = await fetch(`/${instanceId}/admin/generar`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        // CAMBIO: Enviar la pregunta y la respuesta
+                        body: JSON.stringify({ 
+                            frase_base: fraseBase,
+                            respuesta_base: respuestaBase
+                        })
+                    });
+                    const result = await response.json();
+                    if (response.ok) {
+                        setTimeout(() => location.reload(), 500);
+                    } else {
+                        throw new Error(result.detail || 'Error en el servidor');
+                    }
+                } catch (error) {
+                    showAlert('alerta-generacion', `Error al generar: ${error.message}`);
+                    generarBtn.style.display = 'block';
+                    generarLoader.style.display = 'none';
+                }
+            });
+
+            // --- 3. Eliminar Consulta ---
+            document.querySelectorAll('.btn-icon-delete').forEach(button => {
+                button.addEventListener('click', function () {
+                    const claveQ = this.dataset.clave;
+                    showCustomConfirm(`¿Estás seguro de que quieres eliminar la consulta ${claveQ} y todos sus datos asociados?`, async () => {
+                        try {
+                            const response = await fetch(`/${instanceId}/admin/eliminar/${claveQ}`, {
+                                method: 'DELETE'
+                            });
+                            const result = await response.json();
+                            if (response.ok) {
+                                document.getElementById(`consulta-${claveQ}`).remove();
+                                showNotification(`Consulta ${claveQ} eliminada.`);
+                            } else {
+                                throw new Error(result.detail || 'Error al eliminar');
+                            }
+                        } catch (error) {
+                            showAlert('alerta', `Error: ${error.message}`);
+                        }
+                    });
+                });
+            });
+
+            // --- 4. Subir Archivo de Conocimiento ---
+            const uploadForm = document.getElementById('uploadForm');
+            const fileInput = document.getElementById('info_file');
+            const fileNameDisplay = document.querySelector('.file-name-display');
+
+            fileInput.addEventListener('change', () => {
+                fileNameDisplay.textContent = fileInput.files.length > 0 ? fileInput.files[0].name : 'Ningún archivo seleccionado...';
+            });
+
+            uploadForm.addEventListener('submit', async function(e) {
+                e.preventDefault();
+                if (fileInput.files.length === 0) {
+                    showAlert('alerta-upload', 'Por favor, selecciona un archivo .txt para subir.');
+                    return;
+                }
+                const formData = new FormData();
+                formData.append('file', fileInput.files[0]);
+
+                try {
+                    const response = await fetch(`/${instanceId}/admin/upload_info`, {
+                        method: 'POST',
+                        body: formData
+                    });
+                    const result = await response.json();
+                    if (response.ok) {
+                        showNotification(result.message);
+                    } else {
+                        throw new Error(result.detail || 'Error al subir el archivo');
+                    }
+                } catch (error) {
+                    showAlert('alerta-upload', `Error: ${error.message}`);
+                }
+            });
+        });
     </script>
 </body>
 </html>

@@ -1,0 +1,3045 @@
+## Contexto del Proyecto
+### Descripción General
+[AÑADIR AQUÍ: Una descripción general del proyecto. Explica su propósito, funcionalidades clave, y cualquier dependencia importante.]
+
+================================================================================
+## Estructura de Archivos
+A continuación, se listan todos los archivos incluidos en este documento:
+- COMBINAR ARCHIVOS.bat
+- CORRER.bat
+- Combinar.py
+- Diccionario.json
+- Eliminar_Clave.py
+- Exclusiones.json
+- GENERAR NUEVA FRASE.bat
+- Generador.py
+- Instancias\1\Lang.json
+- Instancias\1\Respuestas.json
+- Instancias\1\config.json
+- Instancias\2\Respuestas.json
+- Instancias\2\config.json
+- LangUI.json
+- NUEVA_FRASE.py
+- app.py
+- generador_lib.py
+- static\Base\base-admin.css
+- static\Base\base-index.css
+- static\Themes\Art Pop\theme.css
+- static\Themes\Claro\theme.css
+- static\Themes\Clásico\theme.css
+- static\Themes\Moderno\theme.css
+- static\Themes\Rubber Soul\theme.css
+- templates\admin.html
+- templates\index.html
+- ✘[!] Eliminar base de datos.py
+
+================================================================================
+## Código Fuente Detallado
+
+
+--- Archivo: COMBINAR ARCHIVOS.bat ---
+
+### Rol del archivo: [AÑADIR AQUÍ UNA BREVE DESCRIPCIÓN MANUAL DEL ARCHIVO]
+
+```
+@echo off
+cd /d "%~dp0"
+python COMBINAR.py
+pause
+```
+
+--------------------------------------------------------------------------------
+
+
+--- Archivo: CORRER.bat ---
+
+### Rol del archivo: [AÑADIR AQUÍ UNA BREVE DESCRIPCIÓN MANUAL DEL ARCHIVO]
+
+```
+@echo off
+title Eugenia - Iniciando...
+
+:: Cambiar a la carpeta del script
+cd /d "%~dp0"
+
+echo Verificando dependencias...
+
+:: Verificar si python esta disponible
+where python >nul 2>nul
+if errorlevel 1 (
+    echo.
+    echo -----------------------------------------------------------------
+    echo  ERROR: Python no esta instalado o no esta en el PATH.
+    echo  Por favor, instala Python desde python.org y asegurate
+    echo  de marcar la casilla "Add Python to PATH" durante la instalacion.
+    echo -----------------------------------------------------------------
+    echo.
+    pause
+    exit /b
+)
+
+:: --- Verificacion e instalacion de dependencias ---
+python -c "import fastapi, uvicorn, sentence_transformers, torch, nltk, multipart" >nul 2>nul
+if errorlevel 1 (
+    echo.
+    echo Dependencias faltantes. Intentando instalar...
+    echo (Esto puede tardar varios minutos la primera vez)
+    echo.
+    pip install fastapi uvicorn sentence-transformers torch nltk python-multipart
+    if errorlevel 1 (
+        echo.
+        echo -----------------------------------------------------------------
+        echo  ERROR: Fallo la instalacion de dependencias.
+        echo  Intenta ejecutar este comando manualmente en una terminal:
+        echo  pip install fastapi uvicorn sentence-transformers torch nltk python-multipart
+        echo -----------------------------------------------------------------
+        echo.
+        pause
+        exit /b
+    )
+    echo.
+    echo Dependencias instaladas correctamente.
+    echo.
+) else (
+    echo Dependencias ya instaladas.
+)
+
+echo.
+echo Descargando datos de NLTK...
+python -c "import nltk; nltk.download('wordnet', quiet=True); nltk.download('omw-1.4', quiet=True); nltk.download('punkt', quiet=True); nltk.download('punkt_tab', quiet=True)"
+
+:: Iniciar el servidor y abrir el navegador
+echo.
+echo Iniciando servidor FastAPI...
+echo.
+
+:: Abre el navegador apuntando a la primera instancia por defecto
+start "" "http://127.0.0.1:5000/1"
+
+:: Inicia el servidor Uvicorn. Este comando tomara el control de la ventana.
+python -m uvicorn app:app --host 127.0.0.1 --port 5000
+
+pause
+
+```
+
+--------------------------------------------------------------------------------
+
+
+--- Archivo: Combinar.py ---
+
+### Rol del archivo: [AÑADIR AQUÍ UNA BREVE DESCRIPCIÓN MANUAL DEL ARCHIVO]
+
+```
+import os
+
+def crear_copia_archivos_optimizada():
+    """
+    Crea un archivo de texto con un resumen estructurado para una IA,
+    incluyendo contexto del proyecto y el contenido de archivos específicos
+    (.py, .bat, .js, .jsx, .html, .css, .json)
+    en el directorio actual y sus subcarpetas, excluyendo __pycache__ y venv.
+    """
+
+    # --- Configuración del script ---
+    # Directorio raíz donde se ejecuta el script
+    directorio_raiz = os.getcwd()
+
+    # Tipos de archivo a incluir
+    extensiones_incluidas = [".py", ".bat", ".js", ".jsx", ".html", ".css", ".json"]
+
+    # Carpetas a excluir
+    carpetas_excluidas = ["__pycache__", "venv", "Consultas", "Training"]
+
+    # Nombre del archivo de salida
+    nombre_archivo_salida = "Chatbot.txt"
+    ruta_archivo_salida = os.path.join(directorio_raiz, nombre_archivo_salida)
+
+    print("🚀 Iniciando la creación del archivo de contexto para IA.")
+    print("---")
+    
+    # Marcador de posición para la descripción del proyecto.
+    # El usuario debe editar manualmente el archivo de salida para agregar la descripción.
+    descripcion_proyecto = "[AÑADIR AQUÍ: Una descripción general del proyecto. Explica su propósito, funcionalidades clave, y cualquier dependencia importante.]"
+
+    print("\n---")
+    print(f"🔍 Buscando extensiones: {', '.join(extensiones_incluidas)}")
+    print(f"🚫 Excluyendo carpetas: {', '.join(carpetas_excluidas)}")
+    print(f"💾 El contenido estructurado se guardará en: {ruta_archivo_salida}\n")
+
+    archivos_procesados = []
+
+    # --- Búsqueda y recopilación de archivos ---
+    for carpeta_actual, subdirectorios, archivos in os.walk(directorio_raiz):
+        subdirectorios[:] = [d for d in subdirectorios if d not in carpetas_excluidas]
+
+        for archivo in archivos:
+            _, extension = os.path.splitext(archivo)
+            if extension.lower() in extensiones_incluidas:
+                ruta_relativa = os.path.relpath(os.path.join(carpeta_actual, archivo), directorio_raiz)
+                archivos_procesados.append(ruta_relativa)
+                print("Encontrado: {ruta_relativa}")
+
+    # --- Escritura del archivo de salida ---
+    try:
+        with open(ruta_archivo_salida, "w", encoding="utf-8") as archivo_salida:
+            # 1. Título y Resumen del Proyecto
+            archivo_salida.write("## Contexto del Proyecto\n")
+            archivo_salida.write("### Descripción General\n")
+            archivo_salida.write(descripcion_proyecto)
+            archivo_salida.write("\n\n" + "=" * 80 + "\n")
+
+            # 2. Índice o Listado de Archivos
+            archivo_salida.write("## Estructura de Archivos\n")
+            archivo_salida.write("A continuación, se listan todos los archivos incluidos en este documento:\n")
+            for f in sorted(archivos_procesados):
+                archivo_salida.write(f"- {f}\n")
+            archivo_salida.write("\n" + "=" * 80 + "\n")
+
+            # 3. Contenido de cada archivo
+            archivo_salida.write("## Código Fuente Detallado\n")
+            if not archivos_procesados:
+                 archivo_salida.write("No se encontraron archivos para procesar.")
+
+            for ruta_relativa in sorted(archivos_procesados):
+                ruta_completa_archivo = os.path.join(directorio_raiz, ruta_relativa)
+                try:
+                    with open(ruta_completa_archivo, "r", encoding="utf-8") as f:
+                        contenido = f.read()
+
+                        # Sección para un comentario manual
+                        archivo_salida.write(f"\n\n--- Archivo: {ruta_relativa} ---\n")
+                        archivo_salida.write("\n### Rol del archivo: [AÑADIR AQUÍ UNA BREVE DESCRIPCIÓN MANUAL DEL ARCHIVO]\n\n")
+                        archivo_salida.write(f"```\n{contenido}\n```\n")
+                        archivo_salida.write("\n" + "-" * 80 + "\n") # Separador visual
+
+                except Exception as e:
+                    print(f"Error al leer '{ruta_relativa}': {e}")
+            
+        print(f"\n🎉 ¡Éxito! Se generó el archivo '{nombre_archivo_salida}' con una estructura optimizada para IA.")
+
+    except Exception as e:
+        print(f"\n🚨 ¡ERROR FATAL! No se pudo crear o escribir en '{nombre_archivo_salida}': {e}")
+        print("Por favor, verifica los permisos de escritura en el directorio o si el archivo ya está abierto.")
+    
+    # Pausa para que el usuario pueda leer los mensajes
+    input("\nPresiona Enter para cerrar la ventana...")
+
+if __name__ == "__main__":
+    crear_copia_archivos_optimizada()
+
+```
+
+--------------------------------------------------------------------------------
+
+
+--- Archivo: Diccionario.json ---
+
+### Rol del archivo: [AÑADIR AQUÍ UNA BREVE DESCRIPCIÓN MANUAL DEL ARCHIVO]
+
+```
+{
+  "curated_synonyms": {
+    "verbos_intencion": {
+      "quiero": ["deseo", "quisiera", "necesito", "me gustaría"],
+      "quisiera": ["quiero", "deseo", "necesito", "me gustaría"],
+      "deseo": ["quiero", "quisiera", "necesito", "me gustaría"],
+      "necesito": ["quiero", "quisiera", "deseo", "me gustaría"],
+      "saber": ["conocer", "averiguar", "consultar"],
+      "conocer": ["saber", "averiguar", "consultar"]
+    },
+    "verbos_accion_estado": {
+      "tienen": ["cuentan con", "disponen de", "ofrecen", "poseen"],
+      "tiene": ["cuenta con", "dispone de", "ofrece", "posee"],
+      "hay": ["tienen", "disponen de", "ofrecen"],
+      "reservar": ["agendar", "anotar", "guardar un lugar"],
+      "comprar": ["adquirir", "obtener", "conseguir", "llevarme"],
+      "adquirir": ["comprar", "obtener", "conseguir", "llevarme"],
+      "obtener": ["comprar", "adquirir", "conseguir", "llevarme"],
+      "sale": ["cuesta", "vale"],
+      "cuesta": ["sale", "vale"],
+      "vale": ["cuesta", "sale"]
+    },
+    "sustantivos_objetos": {
+      "articulo": ["producto", "ítem", "objeto"],
+      "producto": ["articulo", "ítem", "objeto"],
+      "menu": ["carta", "opciones de comida"]
+    },
+    "sustantivos_lugares": {
+      "piscina": ["pileta", "alberca"],
+      "pileta": ["piscina", "alberca"],
+      "hotel": ["alojamiento", "establecimiento", "hospedaje"],
+      "habitaciones": ["cuartos", "dormitorios", "alcobas"],
+      "habitacion": ["cuarto", "dormitorio", "alcoba"]
+    },
+    "sustantivos_conceptos": {
+      "informacion": ["datos", "detalles", "referencias"],
+      "direccion": ["ubicación", "domicilio"],
+      "ubicacion": ["dirección", "domicilio"],
+      "precio": ["costo", "valor", "tarifa"],
+      "costo": ["precio", "valor", "tarifa"],
+      "valor": ["precio", "costo", "tarifa"],
+      "disponibilidad": ["lugar", "espacio", "sitio"],
+      "horario": ["horas de atención", "cronograma"],
+      "reserva": ["reservación", "cita"]
+    }
+  },
+  "question_templates": {
+    "cual": [
+      "Cuál es {sujeto}",
+      "Me podrías decir {sujeto}",
+      "Quisiera saber {sujeto}"
+    ],
+    "cuál": [
+      "Cuál es {sujeto}",
+      "Me podrías decir {sujeto}",
+      "Quisiera saber {sujeto}"
+    ],
+    "donde": [
+      "Dónde está {sujeto}",
+      "En qué lugar se encuentra {sujeto}",
+      "Me indicas la ubicación de {sujeto}"
+    ],
+    "dónde": [
+      "Dónde está {sujeto}",
+      "En qué lugar se encuentra {sujeto}",
+      "Me indicas la ubicación de {sujeto}"
+    ],
+    "cuanto": [
+      "Cuánto cuesta {sujeto}",
+      "Cuánto vale {sujeto}",
+      "Qué precio tiene {sujeto}",
+      "A cuánto está {sujeto}"
+    ],
+    "cuánto": [
+      "Cuánto cuesta {sujeto}",
+      "Cuánto vale {sujeto}",
+      "Qué precio tiene {sujeto}",
+      "A cuánto está {sujeto}"
+    ],
+    "hay": [
+      "Hay {sujeto}",
+      "Tienen {sujeto}",
+      "Disponen de {sujeto}"
+    ],
+    "tienen": [
+      "Tienen {sujeto}",
+      "Ofrecen {sujeto}",
+      "Cuentan con {sujeto}"
+    ]
+  }
+}
+
+```
+
+--------------------------------------------------------------------------------
+
+
+--- Archivo: Eliminar_Clave.py ---
+
+### Rol del archivo: [AÑADIR AQUÍ UNA BREVE DESCRIPCIÓN MANUAL DEL ARCHIVO]
+
+```
+import os
+import json
+import glob
+import shutil
+import re
+
+def eliminar_entrada_json(archivo, clave_q):
+    """Elimina de forma segura una entrada de un archivo JSON."""
+    if not os.path.isfile(archivo):
+        print(f"📄 Información: El archivo '{os.path.basename(archivo)}' no existe.")
+        return False
+    try:
+        with open(archivo, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+    except (json.JSONDecodeError, FileNotFoundError):
+        print(f"⚠️  ERROR: El archivo '{os.path.basename(archivo)}' está corrupto.")
+        return False
+
+    clave_encontrada = False
+    if "Respuestas" in data and isinstance(data.get("Respuestas"), dict) and clave_q in data["Respuestas"]:
+        del data["Respuestas"][clave_q]
+        clave_encontrada = True
+    elif clave_q in data:
+        del data[clave_q]
+        clave_encontrada = True
+
+    if not clave_encontrada:
+        print(f"ℹ️  Información: La clave '{clave_q}' no se encontró en '{os.path.basename(archivo)}'.")
+        return True # No es un error si la clave ya no está
+
+    with open(archivo, 'w', encoding='utf-8') as f:
+        json.dump(data, f, ensure_ascii=False, indent=2)
+    print(f"🗑️  Clave '{clave_q}' eliminada de '{os.path.basename(archivo)}'.")
+    return True
+
+def eliminar_archivos_por_patron(carpeta, patron):
+    """Elimina archivos que coincidan con un patrón."""
+    if not os.path.isdir(carpeta):
+        return
+    for archivo in glob.glob(os.path.join(carpeta, patron)):
+        try:
+            os.remove(archivo)
+            print(f"🗑️  Archivo eliminado: {os.path.relpath(archivo)}")
+        except Exception as e:
+            print(f"❌ ERROR al eliminar '{archivo}': {e}")
+
+def ejecutar_eliminacion(instance_id, clave_q):
+    """
+    Función principal que elimina todos los artefactos de una consulta (QX).
+    Puede ser llamada desde otros scripts.
+    """
+    instance_path = os.path.join(os.getcwd(), "Instancias", str(instance_id))
+    if not os.path.isdir(instance_path):
+        return {"status": "error", "message": f"Instancia {instance_id} no encontrada."}
+
+    print(f"\n🚨 Iniciando eliminación para '{clave_q}' en la instancia '{instance_id}'...")
+
+    patron_q_json = f"({clave_q})*.json"
+    patron_q_py = f"({clave_q})*.py"
+
+    # Rutas específicas de la instancia
+    ruta_respuestas = os.path.join(instance_path, "Respuestas.json")
+    ruta_lang = os.path.join(instance_path, "Lang.json")
+    ruta_consultas = os.path.join(instance_path, "Consultas")
+    ruta_training = os.path.join(instance_path, "Training")
+
+    # Ejecutar eliminaciones
+    eliminar_entrada_json(ruta_respuestas, clave_q)
+    eliminar_entrada_json(ruta_lang, clave_q)
+    eliminar_archivos_por_patron(ruta_consultas, patron_q_json)
+    eliminar_archivos_por_patron(ruta_training, patron_q_py)
+
+    print(f"✅ Proceso de eliminación para '{clave_q}' finalizado.")
+    return {"status": "success", "message": f"Consulta {clave_q} eliminada correctamente."}
+
+if __name__ == "__main__":
+    # --- MODO INTERACTIVO (para ejecutar el script directamente) ---
+    def pedir_id_instancia():
+        while True:
+            instance_id = input("🆔 Introduce el ID de la instancia (ej. 1): ").strip()
+            if instance_id.isdigit(): return instance_id
+            print("❌ Por favor, introduce un número válido.")
+
+    def pedir_qx():
+        while True:
+            user_input = input("🔢 Introduce solo el número de QX a eliminar (ej. 102): ").strip()
+            if user_input.isdigit(): return f"Q{int(user_input)}"
+            print("❌ Entrada inválida. Solo números.")
+
+    os.chdir(os.path.dirname(os.path.abspath(__file__)))
+    print(f"📍 Ejecutando en el directorio: {os.getcwd()}\n")
+
+    id_instancia = pedir_id_instancia()
+    clave_a_eliminar = pedir_qx()
+
+    respuesta = input(f"\n    ¿Seguro que quieres eliminar '{clave_a_eliminar}' de la instancia '{id_instancia}'? (s/n): ").strip().lower()
+    if respuesta == 's':
+        ejecutar_eliminacion(id_instancia, clave_a_eliminar)
+    else:
+        print("\n❌ Operación cancelada.")
+
+    input("\nPresiona Enter para salir...")
+
+```
+
+--------------------------------------------------------------------------------
+
+
+--- Archivo: Exclusiones.json ---
+
+### Rol del archivo: [AÑADIR AQUÍ UNA BREVE DESCRIPCIÓN MANUAL DEL ARCHIVO]
+
+```
+{
+  "palabras": [
+    "gracias", "por favor", "hola", "buenas", "buenos días", "buenas tardes",
+    "buenas noches", "qué tal", "que tal", "grasias", "grasiaz", "grasya",
+    "porfabor", "porfvor", "porfvr", "x favor", "xfa", "ola", "holaaa",
+    "wenas", "bnas", "bnos dias", "bnos noches", "q tal", "k tal", "ke tal",
+    "qetal", "qtal", "qué tal?", "que tal?", "ok", "okey", "okay", "vale",
+    "de acuerdo", "perfecto", "ya", "sip", "sí", "no", "ah", "uhm", "mmm",
+    "ajá", "bien", "claro", "obvio", "seguro", "listo", "listo!", "dale",
+    "pues", "veamos", "a ver", "déjame ver", "eh", "bueno",
+
+    "saber", "decir", "decirme", "decirle", "decirnos", "informar", "informarme",
+    "informarle", "informarnos", "preguntar", "preguntarme", "preguntarle", "responder",
+    "responderme", "responderle", "respondernos",
+
+    "saver", "desir", "dezir", "dezirme", "desirme", "desirle", "infornar", "inforarme",
+    "preguntar", "preguntarme", "preguntarle", "preguntarnos", "respnder", "responderme", "responderle",
+
+    "porque", "por que", "porqué", "xq", "pq", "xk", "pk",
+
+    "para qué", "pa que", "p q", "pke", "pqe", "pqé",
+
+    "entonces", "además", "también", "tmbn", "ad+as", "tmb", "tambn", "tbm"
+  ]
+}
+
+```
+
+--------------------------------------------------------------------------------
+
+
+--- Archivo: GENERAR NUEVA FRASE.bat ---
+
+### Rol del archivo: [AÑADIR AQUÍ UNA BREVE DESCRIPCIÓN MANUAL DEL ARCHIVO]
+
+```
+@echo off
+title Generador de Consultas para Instancias
+
+:: Pedir el ID de la instancia
+set /p instance_id="> Introduce el ID de la instancia (ej. 1): "
+if not defined instance_id (
+    echo.
+    echo ERROR: No se introdujo un ID de instancia.
+    pause
+    exit /b
+)
+
+:: Pedir la frase base
+set /p frase="> Introduce la frase base para generar consultas: "
+if not defined frase (
+    echo.
+    echo ERROR: No se introdujo una frase.
+    pause
+    exit /b
+)
+
+echo.
+echo Procesando para instancia '%instance_id%' la frase: "%frase%"
+echo --------------------------------------------------
+python Generador.py "%instance_id%" "%frase%"
+echo --------------------------------------------------
+echo.
+pause
+
+```
+
+--------------------------------------------------------------------------------
+
+
+--- Archivo: Generador.py ---
+
+### Rol del archivo: [AÑADIR AQUÍ UNA BREVE DESCRIPCIÓN MANUAL DEL ARCHIVO]
+
+```
+import sys
+from generador_lib import ejecutar_generacion
+
+if __name__ == "__main__":
+    # --- Manejo de Argumentos de Línea de Comandos ---
+    if len(sys.argv) > 2:
+        instance_id_arg = sys.argv[1]
+        frase_base_arg = sys.argv[2]
+        respuesta_usuario_arg = input(f"\n💬 Introduce la respuesta: ").strip() or "Respuesta faltante"
+        # Usar la frase base como descripción por defecto si no se provee una
+        descripcion_usuario_arg = input(f"\n📝 Introduce la descripción (dejar en blanco usa la frase base): ").strip() or frase_base_arg
+        ejecutar_generacion(instance_id_arg, frase_base_arg, respuesta_usuario_arg, descripcion_usuario_arg)
+
+    else:
+        # --- Modo Interactivo ---
+        print("▶️  Modo interactivo iniciado.")
+        while True:
+            instance_id_arg = input("🆔 Introduce el ID de la instancia (ej. 1): ").strip()
+            if instance_id_arg.isdigit():
+                break
+            else:
+                print("❌ Por favor, introduce un número válido.")
+        
+        frase_base_arg = input("\nIntroduce la frase base para generar consultas: ")
+        if not frase_base_arg:
+            print("❌ No se introdujo ninguna frase. Saliendo.")
+            sys.exit(1)
+            
+        respuesta_usuario_arg = input(f"\n💬 Introduce la respuesta: ").strip() or "Respuesta faltante"
+        # Usar la frase base como descripción por defecto si no se provee una
+        descripcion_usuario_arg = input(f"\n📝 Introduce la descripción (dejar en blanco usa la frase base): ").strip() or frase_base_arg
+        
+        ejecutar_generacion(instance_id_arg, frase_base_arg, respuesta_usuario_arg, descripcion_usuario_arg)
+
+    input("\nPresiona Enter para salir...")
+
+```
+
+--------------------------------------------------------------------------------
+
+
+--- Archivo: Instancias\1\Lang.json ---
+
+### Rol del archivo: [AÑADIR AQUÍ UNA BREVE DESCRIPCIÓN MANUAL DEL ARCHIVO]
+
+```
+{
+  "Q2": "¿Cuál es el horario de la piscina?"
+}
+```
+
+--------------------------------------------------------------------------------
+
+
+--- Archivo: Instancias\1\Respuestas.json ---
+
+### Rol del archivo: [AÑADIR AQUÍ UNA BREVE DESCRIPCIÓN MANUAL DEL ARCHIVO]
+
+```
+{
+  "Respuestas": {
+    "Q2": "Ya"
+  }
+}
+```
+
+--------------------------------------------------------------------------------
+
+
+--- Archivo: Instancias\1\config.json ---
+
+### Rol del archivo: [AÑADIR AQUÍ UNA BREVE DESCRIPCIÓN MANUAL DEL ARCHIVO]
+
+```
+{
+  "theme": "Clásico"
+}
+```
+
+--------------------------------------------------------------------------------
+
+
+--- Archivo: Instancias\2\Respuestas.json ---
+
+### Rol del archivo: [AÑADIR AQUÍ UNA BREVE DESCRIPCIÓN MANUAL DEL ARCHIVO]
+
+```
+{
+  "Respuestas": {}
+}
+```
+
+--------------------------------------------------------------------------------
+
+
+--- Archivo: Instancias\2\config.json ---
+
+### Rol del archivo: [AÑADIR AQUÍ UNA BREVE DESCRIPCIÓN MANUAL DEL ARCHIVO]
+
+```
+{
+  "theme": "Moderno"
+}
+```
+
+--------------------------------------------------------------------------------
+
+
+--- Archivo: LangUI.json ---
+
+### Rol del archivo: [AÑADIR AQUÍ UNA BREVE DESCRIPCIÓN MANUAL DEL ARCHIVO]
+
+```
+{
+  "ChatTitle": "Chat",
+  "ChatHeader": "Chat",
+  "Enviar": "Enviar",
+  "Escriba": "Escriba su consulta aquí...",
+  "NoSabe": "Disculpe. No he entendido su consulta."
+}
+
+```
+
+--------------------------------------------------------------------------------
+
+
+--- Archivo: NUEVA_FRASE.py ---
+
+### Rol del archivo: [AÑADIR AQUÍ UNA BREVE DESCRIPCIÓN MANUAL DEL ARCHIVO]
+
+```
+# -*- coding: utf-8 -*-
+
+from Generador import generar_con_errores
+
+# Ejemplo de uso con una frase base estática
+frase_base_ejemplo = "quiénes están en la reunión"
+nombre_base = "consulta_quienes_reunion"
+
+# Definición de errores comunes para la frase
+errores_comunes_ejemplo = {
+    "reunión": ["reunion", "reunon", "renion"],
+    "quiénes": ["quienes", "kienés", "kien"],
+    "participantes": ["participantes", "partisipantes"],
+    "presentes": ["presentes", "presentez", "presntes"],
+    "asistentes": ["asistentez", "acistentes"]
+}
+
+# Generar frases
+generar_con_errores(
+    frase_base=frase_base_ejemplo,
+    errores_comunes=errores_comunes_ejemplo,
+    nombre_base=nombre_base,
+    n_perfectas=200
+)
+
+```
+
+--------------------------------------------------------------------------------
+
+
+--- Archivo: app.py ---
+
+### Rol del archivo: [AÑADIR AQUÍ UNA BREVE DESCRIPCIÓN MANUAL DEL ARCHIVO]
+
+```
+from fastapi import FastAPI, Request, HTTPException, UploadFile, File
+from fastapi.responses import JSONResponse, HTMLResponse
+from fastapi.staticfiles import StaticFiles
+from fastapi.templating import Jinja2Templates
+import json
+import glob
+from difflib import SequenceMatcher
+import unicodedata
+import re
+import os
+import shutil # Importar la librería shutil
+
+# --- Nuevas importaciones para la IA y scripts locales ---
+from sentence_transformers import SentenceTransformer, util
+import torch
+from generador_lib import ejecutar_generacion
+from Eliminar_Clave import ejecutar_eliminacion
+import nltk # <--- AÑADIDO PARA LA DIVISIÓN INTELIGENTE
+
+if os.name == 'nt':
+    os.system('')
+
+app = FastAPI()
+
+templates = Jinja2Templates(directory="templates")
+# Montamos el directorio 'static' completo
+app.mount("/static", StaticFiles(directory="static"), name="static")
+
+# --- Funciones para manejar la configuración del tema ---
+def get_instance_config(instance_id: int) -> dict:
+    """Carga la configuración de una instancia, incluyendo el tema."""
+    instance_path = os.path.join("Instancias", str(instance_id))
+    config_path = os.path.join(instance_path, "config.json")
+    if os.path.exists(config_path):
+        try:
+            with open(config_path, 'r', encoding='utf-8') as f:
+                return json.load(f)
+        except (json.JSONDecodeError, FileNotFoundError):
+            pass
+    # Devuelve una configuración por defecto si no existe o hay error
+    return {"theme": "Moderno"} # ACTUALIZADO: El valor por defecto ahora es "Moderno"
+
+def save_instance_config(instance_id: int, config: dict):
+    """Guarda la configuración de una instancia."""
+    instance_path = os.path.join("Instancias", str(instance_id))
+    os.makedirs(instance_path, exist_ok=True)
+    config_path = os.path.join(instance_path, "config.json")
+    with open(config_path, 'w', encoding='utf-8') as f:
+        json.dump(config, f, ensure_ascii=False, indent=2)
+
+def get_available_themes() -> list:
+    """Escanea el directorio de temas y devuelve una lista de los disponibles."""
+    themes_dir = os.path.join("static", "Themes")
+    if not os.path.isdir(themes_dir):
+        return []
+    return [d for d in os.listdir(themes_dir) if os.path.isdir(os.path.join(themes_dir, d))]
+
+# --- Lógica de la IA y el Validador ---
+
+class AIResponder:
+    """
+    Gestiona la carga del modelo de IA y la búsqueda de respuestas semánticas
+    en un documento de texto.
+    """
+    def __init__(self, instance_path):
+        self.device = "cuda" if torch.cuda.is_available() else "cpu"
+        print(f"🤖 AIResponder: Usando dispositivo '{self.device}'.")
+        model_name = 'paraphrase-multilingual-MiniLM-L12-v2'
+        try:
+            self.model = SentenceTransformer(model_name, device=self.device)
+            print(f"✅ Modelo de IA '{model_name}' cargado correctamente.")
+        except Exception as e:
+            self.model = None
+            print(f"❌ ERROR al cargar el modelo de IA: {e}")
+            return
+        self.document_path = os.path.join(instance_path, 'informacion_adicional.txt')
+        self.corpus_chunks = []
+        self.corpus_embeddings = None
+        self._load_and_process_document()
+
+    def _split_into_chunks(self, text: str, max_chunk_length: int = 600) -> list[str]:
+        """
+        Divide el texto en fragmentos (chunks) de manera más inteligente.
+        Primero divide por párrafos. Si un párrafo es demasiado largo,
+        lo subdivide en grupos de oraciones.
+        """
+        try:
+            nltk.data.find('tokenizers/punkt')
+        except LookupError:
+            print("📥 Descargando tokenizador de oraciones de NLTK ('punkt')...")
+            nltk.download('punkt', quiet=True)
+
+        text = text.replace('\r\n', '\n')
+        initial_chunks = re.split(r'\n{2,}', text)
+        
+        final_chunks = []
+        for chunk in initial_chunks:
+            chunk = chunk.strip()
+            if len(chunk) == 0:
+                continue
+            
+            if len(chunk) > max_chunk_length:
+                print(f"쪼개기 Chunk demasiado largo ({len(chunk)} chars). Dividiendo en oraciones...")
+                sentences = nltk.sent_tokenize(chunk, language='spanish')
+                current_sub_chunk = ""
+                for sentence in sentences:
+                    if len(current_sub_chunk) + len(sentence) + 1 < max_chunk_length:
+                        current_sub_chunk += sentence + " "
+                    else:
+                        if current_sub_chunk:
+                            final_chunks.append(current_sub_chunk.strip())
+                        current_sub_chunk = sentence + " "
+                if current_sub_chunk:
+                    final_chunks.append(current_sub_chunk.strip())
+            else:
+                final_chunks.append(chunk)
+
+        meaningful_chunks = [c for c in final_chunks if len(c) > 20]
+        print(f"📝 Texto dividido en {len(meaningful_chunks)} fragmentos finales.")
+        return meaningful_chunks
+
+    def _load_and_process_document(self):
+        if not self.model or not os.path.exists(self.document_path): return
+        try:
+            with open(self.document_path, 'r', encoding='utf-8') as f:
+                content = f.read()
+            
+            self.corpus_chunks = self._split_into_chunks(content)
+            
+            if not self.corpus_chunks: 
+                print("⚠️ No se encontraron fragmentos de texto significativos en el documento.")
+                return
+
+            print(f"📚 Procesando {len(self.corpus_chunks)} fragmentos del documento de conocimiento...")
+            self.corpus_embeddings = self.model.encode(self.corpus_chunks, convert_to_tensor=True, device=self.device)
+            print("👍 Documento de conocimiento procesado y listo para consultas.")
+        except Exception as e:
+            print(f"❌ ERROR procesando el documento de IA: {e}")
+
+    def _normalize_for_boost(self, text: str) -> str:
+        """
+        Normalización simplificada para la comparación de títulos.
+        Convierte a minúsculas, elimina acentos y puntuación.
+        """
+        text_norm = unicodedata.normalize('NFKD', text.lower()).encode('ascii', 'ignore').decode('utf-8', 'ignore')
+        text_norm = re.sub(r'[^\w\s]', '', text_norm)
+        return text_norm
+
+    def answer_question(self, question, top_k=5, score_threshold=0.30, title_boost=0.25):
+        """
+        Busca una respuesta combinando búsqueda semántica con un impulso de puntuación
+        para las coincidencias de título, solucionando el sesgo hacia fragmentos más largos.
+        """
+        if self.corpus_embeddings is None or not self.corpus_chunks: return None
+
+        question_embedding = self.model.encode(question, convert_to_tensor=True, device=self.device)
+        
+        hits = util.semantic_search(question_embedding, self.corpus_embeddings, top_k=top_k)[0]
+        
+        if not hits:
+            return None
+
+        # --- Lógica de Re-ranking con Impulso de Título ---
+        boosted_hits = []
+        normalized_question_words = set(self._normalize_for_boost(question).split())
+
+        for hit in hits:
+            chunk_text = self.corpus_chunks[hit['corpus_id']]
+            # Considera las primeras 7 palabras como el "título" del fragmento
+            chunk_title_words = set(self._normalize_for_boost(chunk_text).split()[:7])
+            
+            # Si TODAS las palabras de la consulta están en el título del fragmento, aplica un impulso fuerte
+            if normalized_question_words.issubset(chunk_title_words):
+                boosted_score = hit['score'] + title_boost
+                print(f"🚀 Impulso FUERTE aplicado a '{chunk_text[:30]}...' de {hit['score']:.2f} a {boosted_score:.2f}")
+                hit['score'] = boosted_score
+            
+            boosted_hits.append(hit)
+
+        # Vuelve a ordenar los resultados con las puntuaciones actualizadas
+        sorted_hits = sorted(boosted_hits, key=lambda x: x['score'], reverse=True)
+
+        print(f"🔍 Resultados Re-clasificados: {[ (h['score'], self.corpus_chunks[h['corpus_id']][:40] + '...') for h in sorted_hits]}")
+
+        # Devuelve el mejor resultado si supera el umbral de confianza
+        best_hit = sorted_hits[0]
+        if best_hit['score'] > score_threshold:
+            print(f"✅ Coincidencia final encontrada con puntaje {best_hit['score']:.2f}")
+            return self.corpus_chunks[best_hit['corpus_id']]
+        
+        print(f"❌ Ninguna coincidencia superó el umbral de {score_threshold}. La mejor fue de {best_hit['score']:.2f}")
+        return None
+
+class ValidadorConsultas:
+    """
+    Gestiona la lógica de validación de consultas basada en reglas (archivos JSON).
+    Ahora recibe una instancia de AIResponder en lugar de crearla.
+    """
+    def __init__(self, instance_id: int, ai_responder: AIResponder):
+        self.instance_id = instance_id
+        self.instance_path = os.path.join(os.getcwd(), "Instancias", str(instance_id))
+        self.exclusiones = self._load_json_global("Exclusiones.json")
+        self.respuestas = self._load_json_instancia("Respuestas.json").get("Respuestas", {})
+        self.ai_responder = ai_responder
+
+    def _load_json_global(self, filename):
+        path = os.path.join(os.getcwd(), filename)
+        try:
+            with open(path, 'r', encoding='utf-8') as f:
+                return json.load(f)
+        except (FileNotFoundError, json.JSONDecodeError):
+            return {}
+
+    def _load_json_instancia(self, filename):
+        path = os.path.join(self.instance_path, filename)
+        if not os.path.exists(path): return {}
+        try:
+            with open(path, 'r', encoding='utf-8') as f:
+                return json.load(f)
+        except (FileNotFoundError, json.JSONDecodeError):
+            return {}
+
+    def normalizar_texto(self, texto, limpiar_exclusiones=True):
+        texto_norm = unicodedata.normalize('NFKD', texto.lower()).encode('ascii', 'ignore').decode('utf-8', 'ignore')
+        texto_norm = texto_norm.strip("¿¡?¡!.,").strip()
+        if limpiar_exclusiones:
+            palabras = texto_norm.split()
+            palabras_excluir = self.exclusiones.get("palabras", [])
+            palabras = [p for p in palabras if p not in palabras_excluir]
+            texto_norm = " ".join(palabras)
+        return texto_norm
+
+    def comparar_textos(self, texto1, texto2):
+        return SequenceMatcher(None, texto1, texto2).ratio()
+
+    def buscar_coincidencia_reglas(self, consulta):
+        consulta_norm = self.normalizar_texto(consulta)
+        mejor_coincidencia = {"puntaje": 0}
+        
+        carpeta_consultas = os.path.join(self.instance_path, "Consultas")
+        if not os.path.isdir(carpeta_consultas): return None
+
+        for archivo_path in glob.glob(os.path.join(carpeta_consultas, "*.json")):
+            try:
+                with open(archivo_path, 'r', encoding='utf-8') as f:
+                    data = json.load(f)
+                variantes = data.get("perfectas", []) + data.get("con_errores", [])
+                for variante in variantes:
+                    variante_norm = self.normalizar_texto(variante, False)
+                    similitud = self.comparar_textos(consulta_norm, variante_norm)
+                    if similitud > mejor_coincidencia["puntaje"]:
+                        mejor_coincidencia = {"variante": variante, "archivo": archivo_path, "puntaje": similitud}
+            except (json.JSONDecodeError, FileNotFoundError):
+                continue
+        
+        return mejor_coincidencia if mejor_coincidencia["puntaje"] > 0.65 else None
+
+    def obtener_respuesta_reglas(self, archivo):
+        match = re.search(r"\((Q\d+)\)", archivo)
+        if match:
+            clave_q = match.group(1)
+            return self.respuestas.get(clave_q)
+        return None
+
+    def procesar_consulta(self, consulta):
+        if not os.path.isdir(self.instance_path):
+            langui = self._load_json_global("LangUI.json")
+            return langui.get("NoSabe", "No he podido encontrar una respuesta.")
+
+        resultado_reglas = self.buscar_coincidencia_reglas(consulta)
+        langui = self._load_json_global("LangUI.json")
+        
+        if resultado_reglas:
+            respuesta = self.obtener_respuesta_reglas(resultado_reglas["archivo"])
+            return respuesta or langui.get("NoSabe", "Respuesta para la regla no encontrada.")
+        
+        respuesta_ia = self.ai_responder.answer_question(consulta)
+        if respuesta_ia:
+            return respuesta_ia
+        
+        return langui.get("NoSabe", "No he podido encontrar una respuesta.")
+
+# --- Dos cachés separadas para la IA y las reglas ---
+ai_responders_cache = {}
+validadores_cache = {}
+
+def get_ai_responder(instance_id: int) -> AIResponder:
+    """Crea o recupera un AIResponder de la caché."""
+    if instance_id not in ai_responders_cache:
+        print(f"🧠 Creando y cacheando AIResponder para la instancia {instance_id}...")
+        instance_path = os.path.join(os.getcwd(), "Instancias", str(instance_id))
+        ai_responders_cache[instance_id] = AIResponder(instance_path)
+    return ai_responders_cache[instance_id]
+
+def get_validador(instance_id: int) -> ValidadorConsultas:
+    """Crea o recupera un ValidadorConsultas de la caché, inyectando el AIResponder cacheado."""
+    if instance_id not in validadores_cache:
+        print(f"룰 Creando y cacheando ValidadorConsultas para la instancia {instance_id}...")
+        ai_responder = get_ai_responder(instance_id)
+        validadores_cache[instance_id] = ValidadorConsultas(instance_id, ai_responder)
+    return validadores_cache[instance_id]
+
+# --- ENDPOINTS ---
+
+@app.get("/{instance_id}", response_class=HTMLResponse)
+async def read_root(request: Request, instance_id: int):
+    validador = get_validador(instance_id)
+    langui = validador._load_json_global("LangUI.json")
+    config = get_instance_config(instance_id)
+    selected_theme = config.get("theme", "Moderno") # ACTUALIZADO
+    return templates.TemplateResponse("index.html", {
+        "request": request, 
+        "langui": langui, 
+        "instance_id": instance_id,
+        "selected_theme": selected_theme
+    })
+
+@app.post("/{instance_id}/consulta")
+async def consulta(instance_id: int, data: dict):
+    validador = get_validador(instance_id)
+    consulta_texto = data.get("consulta", "")
+    respuesta = validador.procesar_consulta(consulta_texto)
+    return JSONResponse({"respuesta": respuesta})
+
+@app.get("/{instance_id}/admin", response_class=HTMLResponse)
+async def admin(request: Request, instance_id: int):
+    validador = get_validador(instance_id)
+    respuestas = validador.respuestas
+    lang = validador._load_json_instancia("Lang.json")
+    langui = validador._load_json_global("LangUI.json")
+    
+    claves_ordenadas = sorted(respuestas.keys(), key=lambda q: int(re.sub(r'\D', '', q)))
+    respuestas_ordenadas = {k: respuestas[k] for k in claves_ordenadas}
+    
+    config = get_instance_config(instance_id)
+    selected_theme = config.get("theme", "Moderno") # ACTUALIZADO
+    available_themes = get_available_themes()
+    
+    return templates.TemplateResponse("admin.html", {
+        "request": request,
+        "respuestas": respuestas_ordenadas,
+        "lang": lang,
+        "langui": langui,
+        "instance_id": instance_id,
+        "selected_theme": selected_theme,
+        "available_themes": available_themes
+    })
+
+@app.post("/{instance_id}/admin/guardar")
+async def guardar_configuracion(instance_id: int, data: dict):
+    instance_path = os.path.join("Instancias", str(instance_id))
+    if not os.path.isdir(instance_path):
+        raise HTTPException(status_code=404, detail=f"La instancia {instance_id} no existe.")
+
+    try:
+        if "respuestas" in data:
+            nuevas_respuestas = data.get("respuestas", {})
+            respuestas_path = os.path.join(instance_path, "Respuestas.json")
+            respuestas_data = {"Respuestas": {}}
+            if os.path.exists(respuestas_path):
+                with open(respuestas_path, 'r', encoding='utf-8') as f:
+                    try:
+                        respuestas_data = json.load(f)
+                    except json.JSONDecodeError:
+                        pass
+            
+            if "Respuestas" not in respuestas_data or not isinstance(respuestas_data["Respuestas"], dict):
+                respuestas_data["Respuestas"] = {}
+            respuestas_data["Respuestas"].update(nuevas_respuestas)
+            with open(respuestas_path, 'w', encoding='utf-8') as f:
+                json.dump(respuestas_data, f, ensure_ascii=False, indent=2)
+
+        if "theme" in data:
+            nuevo_tema = data.get("theme")
+            if nuevo_tema and nuevo_tema in get_available_themes():
+                config = get_instance_config(instance_id)
+                config["theme"] = nuevo_tema
+                save_instance_config(instance_id, config)
+        
+        if instance_id in validadores_cache:
+            print(f"♻️  Limpiando caché de Validador (instancia {instance_id}) por guardado de configuración.")
+            del validadores_cache[instance_id]
+            
+        return JSONResponse({"status": "success", "message": "Configuración guardada correctamente."})
+    except Exception as e:
+        return JSONResponse({"status": "error", "message": str(e)}, status_code=500)
+
+@app.post("/{instance_id}/admin/upload_info")
+async def upload_info(instance_id: int, file: UploadFile = File(...)):
+    instance_path = os.path.join("Instancias", str(instance_id))
+    os.makedirs(instance_path, exist_ok=True)
+
+    if file.content_type != 'text/plain':
+        raise HTTPException(status_code=400, detail="El archivo debe ser de tipo .txt")
+
+    file_path = os.path.join(instance_path, "informacion_adicional.txt")
+    
+    try:
+        with open(file_path, "wb") as buffer:
+            shutil.copyfileobj(file.file, buffer)
+        
+        if instance_id in validadores_cache:
+            print(f"♻️  Limpiando caché de Validador (instancia {instance_id}) por subida de archivo de conocimiento.")
+            del validadores_cache[instance_id]
+        if instance_id in ai_responders_cache:
+            print(f"♻️  Limpiando caché de AIResponder (instancia {instance_id}) por subida de archivo de conocimiento.")
+            del ai_responders_cache[instance_id]
+            
+        return JSONResponse({
+            "status": "success",
+            "message": "Archivo de conocimiento actualizado correctamente"
+        })
+    except Exception as e:
+        return JSONResponse({
+            "status": "error",
+            "message": f"No se pudo guardar el archivo: {e}"
+        }, status_code=500)
+
+@app.post("/{instance_id}/admin/generar")
+async def generar_nueva_consulta(instance_id: int, data: dict):
+    frase_base = data.get("frase_base")
+    respuesta_base = data.get("respuesta_base")
+
+    if not frase_base or not respuesta_base:
+        raise HTTPException(status_code=400, detail="La frase base y la respuesta no pueden estar vacías.")
+
+    descripcion_usuario = frase_base
+    respuesta_inicial = respuesta_base
+    
+    resultado = ejecutar_generacion(
+        instance_id=instance_id,
+        frase_base=frase_base,
+        respuesta_usuario=respuesta_inicial,
+        descripcion_usuario=descripcion_usuario
+    )
+    
+    if resultado.get("status") == "success":
+        if instance_id in validadores_cache:
+            print(f"♻️  Limpiando caché de Validador (instancia {instance_id}) por generación de nueva consulta.")
+            del validadores_cache[instance_id]
+        return JSONResponse(resultado)
+    else:
+        raise HTTPException(status_code=500, detail=resultado.get("message", "Error desconocido durante la generación."))
+
+@app.delete("/{instance_id}/admin/eliminar/{clave_q}")
+async def eliminar_consulta(instance_id: int, clave_q: str):
+    resultado = ejecutar_eliminacion(instance_id, clave_q)
+    
+    if resultado.get("status") == "success":
+        if instance_id in validadores_cache:
+            print(f"♻️  Limpiando caché de Validador (instancia {instance_id}) por eliminación de consulta.")
+            del validadores_cache[instance_id]
+        return JSONResponse(resultado)
+    else:
+        raise HTTPException(status_code=500, detail=resultado.get("message", "Error durante la eliminación."))
+
+```
+
+--------------------------------------------------------------------------------
+
+
+--- Archivo: generador_lib.py ---
+
+### Rol del archivo: [AÑADIR AQUÍ UNA BREVE DESCRIPCIÓN MANUAL DEL ARCHIVO]
+
+```
+import json
+import os
+import shutil
+from collections import OrderedDict
+import random
+import glob
+import re
+from itertools import product
+import sys
+import pickle
+
+# Importaciones de NLTK
+import nltk
+from nltk.corpus import wordnet as wn
+from nltk.corpus import cess_esp as cess
+from nltk.tag import UnigramTagger
+
+# --- Global Dictionaries ---
+CURATED_SYNONYMS = {}
+QUESTION_TEMPLATES = {}
+SPANISH_TAGGER = None
+TAGGER_FILE = "spanish_tagger.pkl"
+
+def cargar_diccionarios_globales():
+    """Carga los diccionarios globales desde Diccionario.json."""
+    global CURATED_SYNONYMS, QUESTION_TEMPLATES
+    dict_path = os.path.join(os.getcwd(), "Diccionario.json")
+    try:
+        with open(dict_path, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+            CURATED_SYNONYMS = data.get("curated_synonyms", {})
+            QUESTION_TEMPLATES = data.get("question_templates", {})
+            print(f"✅ Diccionarios globales cargados desde '{dict_path}'.")
+    except (FileNotFoundError, json.JSONDecodeError) as e:
+        print(f"🚨 ERROR al cargar Diccionario.json: {e}")
+        CURATED_SYNONYMS = {}
+        QUESTION_TEMPLATES = {}
+
+def preparar_tagger_espanol():
+    """Carga o entrena el tagger de español."""
+    global SPANISH_TAGGER
+    if SPANISH_TAGGER is not None:
+        return
+    if os.path.exists(TAGGER_FILE):
+        with open(TAGGER_FILE, 'rb') as f:
+            SPANISH_TAGGER = pickle.load(f)
+    else:
+        print("🔧 Creando y entrenando el analizador de español (esto solo pasará una vez)...")
+        train_sents = cess.tagged_sents()
+        tagger = UnigramTagger(train_sents)
+        SPANISH_TAGGER = tagger
+        with open(TAGGER_FILE, 'wb') as f:
+            pickle.dump(tagger, f)
+        print("✅ Analizador de español listo y guardado.")
+
+def descargar_nltk_data():
+    """Verifica y descarga los recursos de NLTK necesarios."""
+    recursos = ['wordnet', 'omw-1.4', 'punkt', 'cess_esp']
+    print("Verificando recursos de NLTK...")
+    for recurso in recursos:
+        try:
+            if recurso == 'omw-1.4':
+                 nltk.data.find(f'corpora/{recurso}.zip')
+            elif recurso == 'punkt':
+                 nltk.data.find(f'tokenizers/{recurso}.zip')
+            else:
+                 nltk.data.find(f'corpora/{recurso}.zip')
+            print(f"  - '{recurso}' ya está disponible.")
+        except LookupError:
+            print(f"  - Descargando '{recurso}'...")
+            nltk.download(recurso, quiet=False)
+            print(f"  - '{recurso}' descargado.")
+
+def obtener_sinonimos_wordnet(palabra):
+    """Obtiene sinónimos de WordNet para una palabra en español."""
+    sinonimos = set()
+    for syn in wn.synsets(palabra, lang='spa'):
+        for lemma in syn.lemmas(lang='spa'):
+            sinonimo = lemma.name().replace('_', ' ')
+            if sinonimo.lower() != palabra.lower():
+                sinonimos.add(sinonimo)
+    return list(sinonimos)
+
+def crear_instancia_si_no_existe(instance_path, instance_id):
+    """Crea la estructura de carpetas para una nueva instancia si no existe."""
+    if not os.path.isdir(instance_path):
+        print(f"📂 La instancia '{instance_id}' no existe. Creándola...")
+        try:
+            os.makedirs(os.path.join(instance_path, "Consultas"))
+            os.makedirs(os.path.join(instance_path, "Training"))
+            print(f"✅ Instancia '{instance_id}' creada.")
+            return True
+        except Exception as e:
+            print(f"❌ ERROR al crear la instancia: {e}")
+            return False
+    return True
+
+def normalizar_y_formatear_frase(frase, frase_original_base):
+    frase = frase.strip().replace('?', '').replace('¿', '')
+    if not frase: return ""
+    palabras = frase.split(' ')
+    primera_palabra_lower = palabras[0].lower()
+    accent_map = {'cual': 'cuál', 'cuanto': 'cuánto', 'donde': 'dónde', 'que': 'qué', 'quien': 'quién'}
+    palabras[0] = accent_map.get(primera_palabra_lower, primera_palabra_lower).capitalize()
+    frase = " ".join(palabras)
+    if primera_palabra_lower in QUESTION_TEMPLATES or frase_original_base.endswith('?'):
+        frase = '¿' + frase + '?'
+    return frase
+
+def generar_variaciones_desde_frase_manual(frase_base):
+    palabras_originales = nltk.word_tokenize(frase_base.lower().replace('?', ''), language='spanish')
+    if not palabras_originales: return []
+    frases_generadas = {normalizar_y_formatear_frase(frase_base, frase_base)}
+    
+    # --- LÓGICA DE SINÓNIMOS CORREGIDA ---
+    componentes_combinados = {}
+    # Lista de palabras comunes a ignorar durante la búsqueda de sinónimos
+    stop_words_espanol = ['un', 'una', 'el', 'la', 'de', 'en', 'y', 'o', 'es', 'son', 'cuál', 'qué', 'me', 'del', 'al']
+
+    for i, p in enumerate(palabras_originales):
+        # --- CORRECCIÓN APLICADA AQUÍ ---
+        # Si la palabra es una "stop word", se salta a la siguiente.
+        if p in stop_words_espanol:
+            continue
+
+        sinonimos_curados = []
+        # 1. Buscar en el diccionario manual
+        for categoria, sinonimos_cat in CURATED_SYNONYMS.items():
+            if p in sinonimos_cat:
+                sinonimos_curados.extend(sinonimos_cat[p])
+                break
+        
+        # 2. Buscar en WordNet
+        sinonimos_wn = obtener_sinonimos_wordnet(p)
+        
+        # 3. Combinar y eliminar duplicados
+        sinonimos_totales = list(set(sinonimos_curados + sinonimos_wn + [p]))
+        
+        if len(sinonimos_totales) > 1:
+            componentes_combinados[i] = sinonimos_totales
+
+    # Generar frases a partir de los componentes combinados
+    if componentes_combinados:
+        for combo in product(*[componentes_combinados[i] for i in componentes_combinados.keys()]):
+            nueva_frase_lista = list(palabras_originales)
+            for i_comp, reemplazo in enumerate(combo):
+                nueva_frase_lista[list(componentes_combinados.keys())[i_comp]] = reemplazo
+            frase_nueva = " ".join(nueva_frase_lista)
+            frases_generadas.add(normalizar_y_formatear_frase(frase_nueva, frase_base))
+
+    # Generar variaciones con plantillas de preguntas
+    primera_palabra = palabras_originales[0]
+    if primera_palabra in QUESTION_TEMPLATES:
+        sujeto_frase = " ".join(palabras_originales[1:])
+        for plantilla in QUESTION_TEMPLATES[primera_palabra]:
+            frases_generadas.add(normalizar_y_formatear_frase(plantilla.format(sujeto=sujeto_frase), frase_base))
+
+    return list(frases_generadas)
+
+
+def siguiente_qx(instance_path):
+    carpeta_consultas = os.path.join(instance_path, "Consultas")
+    os.makedirs(carpeta_consultas, exist_ok=True)
+    archivos = glob.glob(os.path.join(carpeta_consultas, "*.json"))
+    numeros = [int(m.group(1)) for a in archivos if (m := re.search(r"\(Q(\d+)\)", a))]
+    return f"(Q{max(numeros) + 1})" if numeros else "(Q1)"
+
+def leer_json_seguro(ruta, clave_principal=None):
+    if os.path.exists(ruta):
+        try:
+            with open(ruta, 'r', encoding='utf-8') as f:
+                return json.load(f)
+        except json.JSONDecodeError:
+            print(f"⚠️ {os.path.basename(ruta)} corrupto. Creando nuevo.")
+    return {clave_principal: {}} if clave_principal else {}
+
+def ordenar_por_q(diccionario):
+    return OrderedDict(sorted(diccionario.items(), key=lambda item: int(re.sub(r"\D", "", item[0]))))
+
+def guardar_respuesta_y_descripcion(instance_path, qx, respuesta_usuario, descripcion_usuario):
+    q_num = qx.strip("()")
+    
+    archivo_respuestas = os.path.join(instance_path, "Respuestas.json")
+    data = leer_json_seguro(archivo_respuestas, "Respuestas")
+    if "Respuestas" not in data: data["Respuestas"] = {}
+    data["Respuestas"][q_num] = respuesta_usuario
+    data["Respuestas"] = ordenar_por_q(data["Respuestas"])
+    with open(archivo_respuestas, 'w', encoding='utf-8') as f:
+        json.dump(data, f, ensure_ascii=False, indent=2)
+    print(f"📌 Respuesta guardada en {archivo_respuestas}")
+
+    archivo_lang_instancia = os.path.join(instance_path, "Lang.json")
+    lang_data = leer_json_seguro(archivo_lang_instancia)
+    lang_data[q_num] = descripcion_usuario
+    lang_data = ordenar_por_q(lang_data)
+    with open(archivo_lang_instancia, 'w', encoding='utf-8') as f:
+        json.dump(lang_data, f, ensure_ascii=False, indent=2)
+    print(f"📌 Descripción guardada en {archivo_lang_instancia}")
+
+def guardar_consultas_generadas(instance_path, frases_perfectas_base, nombre_base, n_a_seleccionar, qx):
+    carpeta_consultas = os.path.join(instance_path, "Consultas")
+    os.makedirs(carpeta_consultas, exist_ok=True)
+    archivo_salida_json = os.path.join(carpeta_consultas, f"{qx}, {nombre_base}.json")
+    perfectas = random.sample(frases_perfectas_base, min(len(frases_perfectas_base), n_a_seleccionar))
+    with open(archivo_salida_json, 'w', encoding='utf-8') as f:
+        json.dump({"perfectas": perfectas, "total": len(perfectas)}, f, ensure_ascii=False, indent=2)
+    print(f"✅ Archivo JSON creado en: {archivo_salida_json}")
+
+def obtener_palabras_clave(palabras):
+    if not SPANISH_TAGGER: return []
+    stop_words_espanol = ['un', 'una', 'el', 'la', 'de', 'en', 'y', 'o', 'es', 'son', 'cual', 'qué', 'me']
+    functional_verbs = ['quiero', 'quisiera', 'deseo', 'necesito', 'tienen', 'tiene']
+    etiquetas = SPANISH_TAGGER.tag(palabras)
+    claves = [p for p, et in etiquetas if p.isalpha() and p not in stop_words_espanol and p not in functional_verbs]
+    return list(OrderedDict.fromkeys(claves))
+
+def ejecutar_generacion(instance_id, frase_base, respuesta_usuario, descripcion_usuario):
+    """
+    Función principal que encapsula todo el proceso de generación.
+    Puede ser llamada desde el servidor web o desde la línea de comandos.
+    """
+    instance_path = os.path.join(os.getcwd(), "Instancias", str(instance_id))
+    if not crear_instancia_si_no_existe(instance_path, instance_id):
+        return {"status": "error", "message": f"No se pudo crear la instancia {instance_id}"}
+
+    print(f"\n--- Iniciando generación para la instancia: {instance_id} ---")
+
+    # Cargar recursos necesarios
+    cargar_diccionarios_globales()
+    descargar_nltk_data()
+    preparar_tagger_espanol()
+    
+    palabras_tokenizadas = nltk.word_tokenize(frase_base.lower(), language='spanish')
+    palabras_clave = obtener_palabras_clave(palabras_tokenizadas)
+    nombre_base = ",".join(palabras_clave) if palabras_clave else frase_base.replace(" ", "_")[:20]
+    
+    qx = siguiente_qx(instance_path)
+    
+    frases_generadas = generar_variaciones_desde_frase_manual(frase_base)
+
+    guardar_consultas_generadas(
+        instance_path=instance_path,
+        frases_perfectas_base=frases_generadas,
+        nombre_base=nombre_base,
+        n_a_seleccionar=len(frases_generadas),
+        qx=qx
+    )
+    
+    carpeta_training = os.path.join(instance_path, "Training")
+    os.makedirs(carpeta_training, exist_ok=True)
+    archivo_salida_py = os.path.join(carpeta_training, f"{qx}, {nombre_base}.py")
+    script_original = os.path.abspath("NUEVA_FRSE.py")
+    if os.path.exists(script_original):
+        shutil.copy(script_original, archivo_salida_py)
+        print(f"📝 Copia de NUEVA_FRASE.py guardada en: {archivo_salida_py}")
+
+    guardar_respuesta_y_descripcion(instance_path, qx, respuesta_usuario, descripcion_usuario)
+
+    print("\n🚀 Generación completada.")
+    return {"status": "success", "message": f"Consulta {qx} generada con éxito.", "qx": qx}
+
+```
+
+--------------------------------------------------------------------------------
+
+
+--- Archivo: static\Base\base-admin.css ---
+
+### Rol del archivo: [AÑADIR AQUÍ UNA BREVE DESCRIPCIÓN MANUAL DEL ARCHIVO]
+
+```
+/* static/Base/base-admin.css (Chatbot - CORREGIDO) */
+
+/* --- Variables CSS por Defecto (Fallback) --- */
+:root {
+    --font-principal: 'IBM Plex Sans', sans-serif;
+    --color-fondo-oscuro: #0f172a;
+    --color-fondo-claro: #1e293b;
+    --color-borde: #334155;
+    --color-texto-principal: #e2e8f0;
+    --color-texto-secundario: #94a3b8;
+    --color-primario: #3b82f6;
+    --color-primario-hover: #60a5fa;
+    --color-primario-activo: #2563eb;
+    --color-exito: #00E676;
+    --color-exito-hover: #66ffa6;
+    --color-exito-activo: #00b35c;
+    --color-peligro: #FF0000;
+    --color-peligro-hover: #ff6666;
+    --color-peligro-activo: #e60000;
+    --color-mensaje-exito-fondo: #166534;
+    --color-mensaje-exito-borde: #22c55e;
+    --color-mensaje-error-fondo: #991b1b;
+    --color-mensaje-error-borde: #ef4444;
+    --color-texto-blanco: #FFFFFF;
+    --color-input-fondo: var(--color-fondo-oscuro); /* Variable para consistencia */
+}
+
+/* --- Estructura y Layout --- */
+body {
+    background-color: var(--color-fondo-oscuro);
+    font-family: var(--font-principal);
+    color: var(--color-texto-principal);
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    display: flex;
+    justify-content: center;
+}
+
+/* --- Estilo de Ventana para el Contenedor --- */
+.container {
+    max-width: 700px;
+    width: 90%;
+    margin: 40px 0;
+    background-color: var(--color-fondo-claro);
+    padding: 10px 10px 15px 10px;
+    border: 1px solid var(--color-borde);
+    box-sizing: border-box;
+    border-radius: 12px;
+    position: relative;
+}
+
+/* --- Contenedor del encabezado para alineación Flexbox --- */
+.window-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px;
+}
+
+/* --- Título de la ventana (unificado para h1 y h2) --- */
+.window-header h1,
+.window-header h2 {
+    color: var(--color-texto-principal);
+    font-size: 1.2em;
+    font-weight: 400;
+    text-align: center;
+    margin: 0;
+    flex-grow: 1;
+    padding: 0;
+    border: none;
+}
+
+/* --- Botón de Cierre (Cruz) --- */
+.admin-close-button {
+    background-color: transparent;
+    color: var(--color-texto-secundario);
+    width: auto;
+    height: auto;
+    border-radius: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-decoration: none;
+    font-size: 28px;
+    line-height: 1;
+    transition: color 0.2s ease, transform 0.1s ease;
+    padding: 5px;
+}
+
+.admin-close-button:hover {
+    color: var(--color-texto-principal);
+}
+
+.admin-close-button:active {
+    transform: scale(0.95);
+}
+
+/* --- Estilos para Secciones Fijas --- */
+.form-section {
+    padding: 0 10px 1rem 10px;
+    margin-bottom: 1rem;
+    border-bottom: 1px solid var(--color-borde);
+}
+
+.no-border {
+    border-bottom: none;
+    margin-bottom: 0;
+    padding-bottom: 0;
+}
+
+.generar-consulta-section {
+    padding-bottom: 30px; /* Espacio de 30px sobre el separador */
+}
+
+.generar-consulta-section .button-wrapper {
+    text-align: center; /* Centra el botón */
+}
+
+.form-section h2 {
+    font-size: 1em;
+    font-weight: 600;
+    font-family: 'IBM Plex Sans', sans-serif;
+    color: var(--color-texto-principal);
+    margin-bottom: 0.5rem;
+    text-align: left;
+}
+
+
+/* --- Estilos para Secciones Desplegables --- */
+details {
+    margin-bottom: 0;
+}
+
+summary {
+    cursor: pointer;
+    list-style: none;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-weight: 600;
+    font-size: 1em;
+    font-family: 'IBM Plex Sans', sans-serif;
+    color: var(--color-texto-principal);
+    padding: 10px 0;
+    text-align: left;
+}
+
+summary::-webkit-details-marker {
+    display: none;
+}
+
+summary::before {
+    content: 'expand_more';
+    font-family: 'Material Symbols Outlined';
+    font-weight: normal;
+    font-style: normal;
+    font-size: 24px;
+    line-height: 1;
+    letter-spacing: normal;
+    text-transform: none;
+    display: inline-block;
+    white-space: nowrap;
+    word-wrap: normal;
+    direction: ltr;
+    -webkit-font-feature-settings: 'liga';
+    -webkit-font-smoothing: antialiased;
+    transition: transform 0.2s ease-in-out;
+}
+
+details[open] > summary::before {
+    transform: rotate(180deg);
+}
+
+.details-content {
+    padding-top: 15px;
+}
+
+/* --- Estilo para cada item de respuesta --- */
+.response-item {
+    background-color: rgba(15, 23, 42, 0.7);
+    padding: 20px;
+    margin-bottom: 20px;
+    border: 1px solid var(--color-borde);
+    border-radius: 10px;
+    position: relative;
+}
+
+.btn-icon-delete {
+    background: none;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+    color: var(--color-texto-secundario);
+    font-size: 24px;
+    line-height: 1;
+    transition: color 0.2s ease, transform 0.1s ease;
+}
+
+.btn-icon-delete:hover {
+    color: var(--color-peligro);
+}
+
+.btn-icon-delete:active {
+    transform: scale(0.95);
+}
+
+
+/* --- Estilos de Formularios (ACTUALIZADO) --- */
+.form-control, .form-select {
+    width: 100%;
+    padding: 10px;
+    margin-bottom: 15px;
+    border: 1px solid var(--color-borde);
+    background-color: var(--color-input-fondo);
+    font-size: 1em;
+    color: var(--color-texto-principal);
+    box-sizing: border-box;
+    border-radius: 8px;
+    line-height: 1.5;
+    font-family: inherit;
+}
+
+select, .form-select {
+    appearance: none;
+    background-image: url("data:image/svg+xml;utf8,<svg fill='white' height='20' viewBox='0 0 24 24' width='20' xmlns='http://www.w3.org/2000/svg'><path d='M7 10l5 5 5-5z'/></svg>");
+    background-repeat: no-repeat;
+    background-position: right 10px center !important; /* Estandariza la posición del icono */
+    background-size: 20px;
+    padding-right: 40px;
+}
+
+#theme_selector {
+    width: 50%;
+}
+
+.form-control:focus, .form-select:focus {
+    background-color: var(--color-input-fondo);
+    color: var(--color-texto-principal);
+    border-color: var(--color-primario);
+    box-shadow: 0 0 0 0.25rem rgba(59, 130, 246, 0.25);
+}
+
+.form-label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 500;
+    color: var(--color-texto-secundario) !important;
+}
+
+.form-label code {
+    color: var(--color-peligro);
+    font-weight: 600;
+    background-color: rgba(255, 0, 0, 0.1);
+    padding: 2px 5px;
+    border-radius: 4px;
+    font-family: monospace;
+}
+
+.mb-3 {
+    margin-bottom: 1rem !important;
+}
+
+.form-control::placeholder {
+    color: var(--color-texto-secundario);
+    opacity: 0.7;
+}
+
+/* CORREGIDO: Se ajusta el tamaño y peso de la fuente para que coincida con el título principal */
+.query-title {
+    color: var(--color-primario);
+    margin: 0;
+    font-size: 1.2em; /* Coincide con .window-header h1 */
+    font-weight: 400; /* Coincide con .window-header h1 */
+}
+
+.query-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.75rem;
+}
+
+/* --- Estilos para Input de Archivo Personalizado --- */
+.file-input-container {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+}
+
+.custom-file-input {
+    position: relative;
+    width: 100%;
+    flex-grow: 1;
+}
+
+.custom-file-input input[type="file"] {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    top: 0;
+    left: 0;
+    opacity: 0;
+    cursor: pointer;
+    z-index: 2;
+}
+
+.file-input-label {
+    display: flex;
+    align-items: center;
+    background-color: var(--color-fondo-oscuro);
+    border: 1px solid var(--color-borde);
+    border-radius: 8px;
+    overflow: hidden;
+    position: relative;
+    z-index: 1;
+    transition: border-color 0.2s ease;
+    cursor: pointer;
+}
+
+.custom-file-input:hover .file-input-label {
+    border-color: var(--color-primario);
+}
+
+.file-name-display {
+    padding: 10px 15px;
+    color: var(--color-texto-secundario);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    flex-grow: 1;
+}
+
+.file-browse-button {
+    background-color: var(--color-borde);
+    color: var(--color-texto-principal);
+    padding: 10px 20px;
+    font-weight: 600;
+    white-space: nowrap;
+    transition: background-color 0.2s ease, transform 0.1s ease;
+    border-left: 1px solid var(--color-borde);
+}
+
+.custom-file-input:hover .file-browse-button {
+    filter: brightness(1.2);
+}
+
+.custom-file-input:active .file-browse-button {
+    filter: brightness(0.9);
+    transform: translateY(1px);
+}
+
+
+/* --- Estilos de Botones --- */
+.btn {
+    font-family: var(--font-principal);
+    color: var(--color-texto-blanco) !important;
+    padding: 10px 20px !important;
+    border: none !important;
+    cursor: pointer;
+    font-size: 1em;
+    font-weight: 600 !important;
+    text-decoration: none;
+    display: inline-block;
+    text-align: center;
+    border-radius: 8px !important;
+    transition: background-color 0.2s ease, transform 0.1s ease, opacity 0.2s ease !important;
+}
+
+.btn:active {
+    transform: scale(0.98) !important;
+}
+
+/* CAMBIO: Estilo para el botón deshabilitado */
+.btn:disabled {
+    background-color: var(--color-borde) !important;
+    color: var(--color-texto-secundario) !important;
+    cursor: not-allowed;
+    opacity: 0.6;
+    transform: none !important;
+}
+
+.btn-info {
+    background-color: var(--color-primario);
+}
+.btn-info:hover {
+    background-color: var(--color-primario-hover);
+}
+
+.btn-success {
+    background-color: var(--color-exito);
+}
+.btn-success:hover {
+    background-color: var(--color-exito-hover);
+}
+
+.btn-danger {
+    background-color: var(--color-peligro);
+}
+.btn-danger:hover {
+    background-color: var(--color-peligro-hover);
+}
+
+.btn-primary {
+    background-color: var(--color-primario);
+}
+.btn-primary:hover {
+    background-color: var(--color-primario-hover);
+}
+
+.button-group {
+    text-align: center;
+    margin-top: 20px;
+}
+
+.main-submit-group {
+    border-top: 1px solid var(--color-borde);
+    padding-top: 30px;
+    padding-bottom: 15px;
+    text-align: center;
+}
+
+.btn-icon-upload {
+    background: none;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+    color: var(--color-texto-principal);
+    font-size: 24px;
+    line-height: 1;
+    transition: color 0.2s ease, transform 0.1s ease;
+}
+
+.btn-icon-upload:hover {
+    color: var(--color-primario);
+}
+
+.btn-icon-upload:active {
+    transform: scale(0.95);
+}
+
+```
+
+--------------------------------------------------------------------------------
+
+
+--- Archivo: static\Base\base-index.css ---
+
+### Rol del archivo: [AÑADIR AQUÍ UNA BREVE DESCRIPCIÓN MANUAL DEL ARCHIVO]
+
+```
+/* --- Variables CSS por Defecto (Fallback) --- */
+:root {
+    --font-principal: 'IBM Plex Sans', sans-serif;
+    --color-fondo: #111827;
+    --color-contenedor: #1f2937;
+    --color-borde: #374151;
+    --color-texto-principal: #f9fafb;
+    --color-texto-secundario: #9ca3af;
+    --color-primario: #3b82f6;
+    --color-primario-hover: #60a5fa;
+    --color-secundario: #8b5cf6; /* Añadido para fallback */
+    
+    /* Colores de burbujas actualizados */
+    --color-burbuja-bot: var(--color-primario); /* Bot ahora es azul */
+    --color-burbuja-usuario: var(--color-secundario); /* Usuario ahora es morado */
+    
+    --color-input-fondo: #111827;
+    --color-input-texto: #f9fafb;
+    --color-texto-blanco: #ffffff;
+    --sombra-caja: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05);
+}
+
+body {
+    background-color: var(--color-fondo);
+    color: var(--color-texto-principal);
+    font-family: var(--font-principal);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    margin: 0;
+}
+
+.chat-container {
+    background-color: var(--color-contenedor);
+    border-radius: 12px;
+    width: 400px;
+    max-width: 90%;
+    box-shadow: var(--sombra-caja);
+    display: flex;
+    flex-direction: column;
+}
+
+.chat-header {
+    background-color: var(--color-primario);
+    color: var(--color-texto-blanco);
+    padding: 12px;
+    border-radius: 12px 12px 0 0;
+    text-align: center;
+    font-weight: bold;
+    font-size: 1.2em;
+}
+
+.chat-log {
+    height: 400px;
+    overflow-y: auto;
+    padding: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.mensaje {
+    display: flex;
+    animation: fadeIn 0.3s ease forwards;
+}
+
+.mensaje.usuario {
+    justify-content: flex-end;
+}
+
+.mensaje.bot {
+    justify-content: flex-start;
+}
+
+.burbuja {
+    max-width: 70%;
+    padding: 10px 14px;
+    border-radius: 18px;
+    line-height: 1.4;
+    word-wrap: break-word;
+    position: relative;
+}
+
+.mensaje.bot .burbuja {
+    background-color: var(--color-burbuja-bot);
+    color: var(--color-texto-blanco); /* Texto blanco para mejor contraste */
+}
+
+.mensaje.usuario .burbuja {
+    background-color: var(--color-burbuja-usuario);
+    color: var(--color-texto-blanco);
+}
+
+
+.chat-input {
+    display: flex;
+    padding: 10px;
+    border-top: 1px solid var(--color-borde);
+    gap: 8px;
+}
+
+.chat-input input {
+    flex: 1;
+    padding: 10px;
+    border: 1px solid var(--color-borde);
+    border-radius: 18px;
+    outline: none;
+    background-color: var(--color-input-fondo);
+    color: var(--color-input-texto);
+    transition: border-color 0.2s ease;
+}
+
+.chat-input input:focus {
+    border-color: var(--color-primario);
+}
+
+.chat-input button {
+    padding: 10px 20px;
+    background-color: var(--color-primario);
+    border: none;
+    border-radius: 18px;
+    color: var(--color-texto-blanco);
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.2s ease, transform 0.1s ease;
+}
+
+.chat-input button:hover {
+    background-color: var(--color-primario-hover);
+}
+
+.chat-input button:active {
+    transform: scale(0.98);
+}
+
+.loader {
+    border: 4px solid var(--color-borde);
+    border-top: 4px solid var(--color-primario);
+    border-radius: 50%;
+    width: 18px;
+    height: 18px;
+    animation: spin 1s linear infinite;
+    margin: auto;
+}
+
+.admin-icon {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    font-size: 24px;
+    color: var(--color-texto-secundario);
+    cursor: pointer;
+    z-index: 1000;
+    text-decoration: none;
+    transition: color 0.2s ease;
+}
+.admin-icon:hover {
+    color: var(--color-texto-principal);
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+```
+
+--------------------------------------------------------------------------------
+
+
+--- Archivo: static\Themes\Art Pop\theme.css ---
+
+### Rol del archivo: [AÑADIR AQUÍ UNA BREVE DESCRIPCIÓN MANUAL DEL ARCHIVO]
+
+```
+/* static/Themes/ArtPop/theme.css */
+:root {
+    /* --- Tipografía --- */
+    --font-principal: 'IBM Plex Sans', sans-serif;
+
+    /* --- Colores Base (Paleta Art Pop) --- */
+    --color-fondo: #2E294E;             /* Índigo profundo (para fondo de chat) */
+    --color-contenedor: #3A355A;        /* Gris azulado oscuro (para contenedor de chat) */
+    --color-fondo-oscuro: #2E294E;       /* Mismo índigo (para fondo de admin) */
+    --color-fondo-claro: #3A355A;        /* Mismo gris azulado (para contenedor de admin) */
+    --color-borde: #5C5580;              /* Borde más claro */
+    --color-texto-principal: #F0F0F0;    /* Texto principal claro */
+    --color-texto-secundario: #B0A8D0;   /* Texto secundario lavanda */
+    
+    /* --- Colores de Acento --- */
+    --color-primario: #E0115F;           /* Fucsia/Rosa principal */
+    --color-primario-hover: #f3387f;
+    --color-primario-activo: #A00B47;
+
+    /* === COLORES DE BURBUJA ADAPTADOS === */
+    --color-burbuja-bot: #E0115F; 
+    --color-burbuja-usuario: #FFD700; 
+
+    /* --- Colores de Inputs y Texto --- */
+    --color-input-fondo: #4A4570;        /* Fondo de input más claro */
+    --color-input-texto: #F0F0F0;        /* Texto de input claro */
+    --color-texto-blanco: #FFFFFF;
+    --color-texto-oscuro: #1A1A1A;       /* Texto oscuro para elementos claros */
+    
+    /* --- Otros colores funcionales (para admin y chat) --- */
+    --sombra-caja: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05);
+    --color-exito: #22C55E;
+    --color-exito-hover: #4ADE80;
+    --color-exito-activo: #16A34A;
+    --color-peligro: #FF312E;
+    --color-peligro-hover: #FF6B6B;
+    --color-peligro-activo: #CC0000;
+    --color-mensaje-exito-fondo: #166534;
+    --color-mensaje-exito-borde: #22c55e;
+    --color-mensaje-error-fondo: #991b1b;
+    --color-mensaje-error-borde: #ef4444;
+}
+
+/* --- Sobrescritura para legibilidad --- */
+/* Asegura que el texto en la burbuja del usuario (amarilla) sea oscuro para mejor contraste */
+.mensaje.usuario .burbuja {
+    color: var(--color-texto-oscuro) !important;
+}
+
+```
+
+--------------------------------------------------------------------------------
+
+
+--- Archivo: static\Themes\Claro\theme.css ---
+
+### Rol del archivo: [AÑADIR AQUÍ UNA BREVE DESCRIPCIÓN MANUAL DEL ARCHIVO]
+
+```
+/* static/Themes/Claro/theme.css */
+:root {
+    /* --- Tipografía --- */
+    --font-principal: 'IBM Plex Sans', sans-serif;
+
+    /* --- Colores Base (Unificados para Chat y Admin) --- */
+    --color-fondo: #ffffff;             /* Fondo principal del chat (Blanco) */
+    --color-contenedor: #f3f4f6;        /* Contenedor del chat (Gris claro) */
+    --color-fondo-oscuro: #ffffff;      /* Fondo del admin (Blanco) */
+    --color-fondo-claro: #f3f4f6;       /* Contenedor del admin (Gris claro) */
+    --color-borde: #e5e7eb;             /* Borde (Gris más claro) */
+    --color-texto-principal: #111827;   /* Texto principal (Oscuro) */
+    --color-texto-secundario: #6b7280;  /* Texto secundario (Gris medio) */
+    --color-texto-blanco: #ffffff;      /* Texto para burbujas y botones */
+    --color-input-fondo: #ffffff;       /* Fondo del campo de texto (Blanco) */
+    --color-input-texto: #111827;       /* Texto del campo de texto (Oscuro) */
+    
+    /* --- Colores de Acento --- */
+    --color-primario: #3b82f6;          /* Azul (Botón de envío, burbuja del bot) */
+    --color-primario-hover: #60a5fa;
+    --color-primario-activo: #2563eb;
+    --color-secundario: #8b5cf6;         /* Púrpura (Burbuja del usuario) */
+    --color-exito: #10b981;             /* Verde para éxito (Admin) */
+    --color-exito-hover: #34d399;
+    --color-exito-activo: #059669;
+    --color-peligro: #ef4444;           /* Rojo para peligro (Admin) */
+    --color-peligro-hover: #f87171;
+    --color-peligro-activo: #dc2626;
+
+    /* --- Colores Específicos del Chat --- */
+    --color-burbuja-bot: var(--color-primario); 
+    --color-burbuja-usuario: var(--color-secundario); 
+    --sombra-caja: 0 10px 15px -3px rgba(0,0,0,0.07), 0 4px 6px -2px rgba(0,0,0,0.04);
+
+    /* --- Colores de Mensajes (para Admin) --- */
+    --color-mensaje-exito-fondo: #dcfce7;
+    --color-mensaje-exito-borde: var(--color-exito);
+    --color-mensaje-error-fondo: #fee2e2;
+    --color-mensaje-error-borde: var(--color-peligro);
+}
+
+/* --- Degradado para el encabezado del chat --- */
+.chat-header {
+    background: linear-gradient(to right, var(--color-primario), var(--color-secundario));
+}
+
+/* --- Sobrescritura para legibilidad en tema claro --- */
+.container select, .container .form-select {
+    background-image: url("data:image/svg+xml;utf8,<svg fill='black' height='20' viewBox='0 0 24 24' width='20' xmlns='http://www.w3.org/2000/svg'><path d='M7 10l5 5 5-5z'/></svg>") !important;
+}
+
+.response-item {
+    background-color: #ffffff;
+}
+
+```
+
+--------------------------------------------------------------------------------
+
+
+--- Archivo: static\Themes\Clásico\theme.css ---
+
+### Rol del archivo: [AÑADIR AQUÍ UNA BREVE DESCRIPCIÓN MANUAL DEL ARCHIVO]
+
+```
+/* static/Themes/Clasico/theme.css */
+:root {
+    /* --- Tipografía --- */
+    --font-principal: 'IBM Plex Sans', sans-serif; /* CORREGIDO: Fuente unificada */
+
+    /* --- Colores Base (Paleta Clásico) --- */
+    --color-fondo: #008080;             /* Verde azulado de escritorio (para fondo de chat) */
+    --color-contenedor: #C0C0C0;        /* Gris de ventana estándar (para contenedor de chat) */
+    --color-fondo-oscuro: #008080;       /* Mismo verde azulado (para fondo de admin) */
+    --color-fondo-claro: #C0C0C0;        /* Mismo gris (para contenedor de admin) */
+    --color-borde: #808080;              /* Borde oscuro para efecto 3D */
+    --color-texto-principal: #000000;    /* Texto principal negro */
+    --color-texto-secundario: #000000;   /* Texto secundario negro */
+    
+    /* --- Colores de Acento --- */
+    --color-primario: #000080;           /* Azul de barra de título */
+    --color-primario-hover: #0000A0;
+    --color-primario-activo: #000050;
+
+    /* === COLORES DE BURBUJA ADAPTADOS === */
+    --color-burbuja-bot: #000080; 
+    --color-burbuja-usuario: #800080; 
+
+    /* --- Colores de Inputs y Texto --- */
+    --color-input-fondo: #FFFFFF;        /* Fondo de input blanco */
+    --color-input-texto: #000000;        /* Texto de input negro */
+    --color-texto-blanco: #FFFFFF;
+    
+    /* --- Otros colores funcionales (para admin y chat) --- */
+    --sombra-caja: 2px 2px 0px rgba(0,0,0,0.4); /* Sombra dura para efecto retro */
+    --color-exito: #008000;
+    --color-exito-hover: #00A000;
+    --color-exito-activo: #005000;
+    --color-peligro: #800000;
+    --color-peligro-hover: #A00000;
+    --color-peligro-activo: #500000;
+    --color-mensaje-exito-fondo: #D4EDDA;
+    --color-mensaje-exito-borde: #C3E6CB;
+    --color-mensaje-error-fondo: #F8D7DA;
+    --color-mensaje-error-borde: #F5C6CB;
+    
+    /* CAMBIO: Variable de color traída desde la agenda */
+    --color-admin-panel-item-fondo: #E0E0E0; /* Gris claro para items en admin */
+}
+
+/* --- Sobrescritura para Admin Panel --- */
+/* Asegura que los campos de input en el admin usen el fondo blanco definido */
+.container input[type="text"],
+.container input[type="number"],
+.container input[type="date"],
+.container input[type="time"],
+.container select,
+.custom-file-input .file-input-label {
+    background-color: var(--color-input-fondo) !important;
+    color: var(--color-texto-principal) !important;
+}
+
+/* Flecha negra para el desplegable en el tema Clásico */
+.container select, .container .form-select {
+    background-image: url("data:image/svg+xml;utf8,<svg fill='black' height='20' viewBox='0 0 24 24' width='20' xmlns='http://www.w3.org/2000/svg'><path d='M7 10l5 5 5-5z'/></svg>") !important;
+}
+
+/* CAMBIO: Regla actualizada para usar el nuevo color */
+.response-item {
+    background-color: var(--color-admin-panel-item-fondo);
+}
+
+```
+
+--------------------------------------------------------------------------------
+
+
+--- Archivo: static\Themes\Moderno\theme.css ---
+
+### Rol del archivo: [AÑADIR AQUÍ UNA BREVE DESCRIPCIÓN MANUAL DEL ARCHIVO]
+
+```
+/* static/Themes/Moderno/theme.css */
+:root {
+    /* --- Tipografía --- */
+    --font-principal: 'IBM Plex Sans', sans-serif;
+
+    /* --- Colores Base (Unificados para Chat y Admin) --- */
+    --color-fondo: #111827;             /* Fondo principal del chat */
+    --color-contenedor: #1f2937;        /* Contenedor del chat */
+    --color-fondo-oscuro: #111827;      /* Fondo del admin (mismo que chat) */
+    --color-fondo-claro: #1f2937;       /* Contenedor del admin (mismo que chat) */
+    --color-borde: #374151;
+    --color-texto-principal: #f9fafb;
+    --color-texto-secundario: #9ca3af;
+    --color-texto-blanco: #ffffff;
+    --color-input-fondo: #111827;
+    --color-input-texto: #f9fafb;
+    
+    /* --- Colores de Acento --- */
+    --color-primario: #3b82f6;
+    --color-primario-hover: #60a5fa;
+    --color-primario-activo: #2563eb; /* Añadido */
+    --color-exito: #10b981;
+    --color-exito-hover: #34d399;
+    --color-exito-activo: #059669;  /* Añadido */
+    --color-peligro: #ef4444;
+    --color-peligro-hover: #f87171;
+    --color-peligro-activo: #dc2626; /* Añadido */
+
+    /* --- Colores Específicos del Chat --- */
+    --color-burbuja-bot: #3b82f6; 
+    --color-burbuja-usuario: #d946ef; 
+    --sombra-caja: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05);
+
+    /* --- Colores de Mensajes (para Admin) --- */
+    --color-mensaje-exito-fondo: #052e16;
+    --color-mensaje-exito-borde: var(--color-exito);
+    --color-mensaje-error-fondo: #450a0a;
+    --color-mensaje-error-borde: var(--color-peligro);
+}
+
+/* --- INICIO DE LA CORRECCIÓN: Degradado para el encabezado del chat --- */
+.chat-header {
+    background: linear-gradient(to right, var(--color-primario), var(--color-burbuja-usuario));
+}
+/* --- FIN DE LA CORRECCIÓN --- */
+
+```
+
+--------------------------------------------------------------------------------
+
+
+--- Archivo: static\Themes\Rubber Soul\theme.css ---
+
+### Rol del archivo: [AÑADIR AQUÍ UNA BREVE DESCRIPCIÓN MANUAL DEL ARCHIVO]
+
+```
+/* static/Themes/Soul/theme.css */
+:root {
+    /* --- Tipografía --- */
+    --font-principal: 'IBM Plex Sans', sans-serif; /* CORREGIDO: Fuente unificada */
+
+    /* --- Colores Base (Paleta Rubber Soul) --- */
+    --color-fondo: #04180c;             /* Verde muy oscuro (para fondo de chat) */
+    --color-contenedor: #186052;        /* Verde azulado (para contenedor de chat) */
+    --color-fondo-oscuro: #04180c;       /* Mismo verde oscuro (para fondo de admin) */
+    --color-fondo-claro: #186052;        /* Mismo verde azulado (para contenedor de admin) */
+    --color-borde: #000000;              /* Borde negro */
+    --color-texto-principal: #F0F0F0;    /* Texto principal claro */
+    --color-texto-secundario: #a0b5ab;   /* Texto secundario verde grisáceo */
+    
+    /* --- Colores de Acento --- */
+    --color-primario: #c95c19;           /* Naranja, color principal */
+    --color-primario-hover: #e07b39;
+    --color-primario-activo: #b34a0e;
+
+    /* === COLORES DE BURBUJA ADAPTADOS === */
+    --color-burbuja-bot: #c95c19; 
+    --color-burbuja-usuario: #08533e; 
+
+    /* --- Colores de Inputs y Texto --- */
+    --color-input-fondo: #3a3319;        /* Oliva oscuro */
+    --color-input-texto: #F0F0F0;        /* Texto claro para el input */
+    --color-texto-blanco: #FFFFFF;
+    
+    /* --- Otros colores funcionales (para admin y chat) --- */
+    --sombra-caja: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05);
+    --color-exito: #41AA29;
+    --color-exito-hover: #63C04F;
+    --color-exito-activo: #358A21;
+    --color-peligro: #ef1921;
+    --color-peligro-hover: #f2474d;
+    --color-peligro-activo: #d90a11;
+    --color-mensaje-exito-fondo: #166534;
+    --color-mensaje-exito-borde: #22c55e;
+    --color-mensaje-error-fondo: #991b1b;
+    --color-mensaje-error-borde: #ef4444;
+}
+
+```
+
+--------------------------------------------------------------------------------
+
+
+--- Archivo: templates\admin.html ---
+
+### Rol del archivo: [AÑADIR AQUÍ UNA BREVE DESCRIPCIÓN MANUAL DEL ARCHIVO]
+
+```
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Administrador de Instancia {{ instance_id }}</title>
+    
+    <!-- Importar la fuente IBM Plex Sans -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;700&display=swap" rel="stylesheet">
+    
+    <!-- Importar los íconos de Material Design -->
+    <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
+
+    <!-- 1. Carga la ESTRUCTURA base del admin -->
+    <link rel="stylesheet" href="/static/Base/base-admin.css">
+    <!-- 2. Carga los COLORES Y FUENTES del tema seleccionado -->
+    <link rel="stylesheet" href="/static/Themes/{{ selected_theme }}/theme.css">
+
+    <!-- Estilos para la animación de carga y modales -->
+    <style>
+        .loader {
+            border: 4px solid var(--color-borde, #334155);
+            border-top: 4px solid var(--color-primario, #3b82f6);
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin: auto;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        /* Estilos para el modal de confirmación personalizado */
+        .custom-modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.6);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 2000;
+        }
+        .custom-modal-content {
+            background-color: var(--color-fondo-claro);
+            padding: 25px;
+            border-radius: 12px;
+            border: 1px solid var(--color-borde);
+            text-align: center;
+            max-width: 400px;
+            width: 90%;
+        }
+        .custom-modal-content p {
+            color: var(--color-texto-principal);
+            margin-bottom: 20px;
+        }
+        .custom-modal-buttons button {
+            margin: 0 10px;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        .custom-modal-buttons .confirm-btn {
+            background-color: var(--color-peligro);
+            color: var(--color-texto-blanco);
+        }
+        .custom-modal-buttons .cancel-btn {
+            background-color: var(--color-borde);
+            color: var(--color-texto-principal);
+        }
+
+        /* --- Estilos para Notificaciones (Toasts) --- */
+        #notification-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            align-items: flex-end;
+        }
+        .toast-notification {
+            background-color: var(--color-exito, #00E676);
+            color: var(--color-texto-blanco, #FFFFFF);
+            padding: 15px 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            min-width: 250px;
+            max-width: 350px;
+            animation: slideInDown 0.4s ease-out forwards;
+        }
+        .toast-notification.hide {
+            animation: slideOutUp 0.4s ease-in forwards;
+        }
+        @keyframes slideInDown {
+            from {
+                transform: translateY(-120%);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+        @keyframes slideOutUp {
+            from {
+                transform: translateY(0);
+                opacity: 1;
+            }
+            to {
+                transform: translateY(-120%);
+                opacity: 0;
+            }
+        }
+    </style>
+
+</head>
+<body>
+    <div id="notification-container"></div>
+    <div class="container">
+        <!-- CONTENEDOR FLEXIBLE PARA EL TÍTULO Y EL BOTÓN DE CIERRE -->
+        <div class="window-header">
+            <!-- TÍTULO DEL PANEL -->
+            <h1 class="window-title">Configuración</h1>
+            <!-- BOTÓN DE CIERRE -->
+            <a href="/{{ instance_id }}" class="admin-close-button" title="Ir al Chat">
+                <span class="material-symbols-outlined">close</span>
+            </a>
+        </div>
+        
+        <!-- SECCIÓN: Configuración Visual -->
+        <div class="form-section">
+            <h2>Tema Visual</h2>
+            <div class="mb-3">
+                <select class="form-select" id="theme_selector" name="theme" aria-label="Selector de Tema Visual">
+                    {% for theme_name in available_themes %}
+                        <option value="{{ theme_name }}" {% if theme_name == selected_theme %}selected{% endif %}>
+                            {{ theme_name }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+
+        <!-- Sección para Generar Nueva Consulta -->
+        <div class="form-section generar-consulta-section">
+            <h2>Añadir Nueva Consulta</h2>
+            <form id="generarForm">
+                <div class="mb-3">
+                    <label for="frase_base" class="form-label">Pregunta</label>
+                    <input type="text" class="form-control" id="frase_base" name="frase_base" placeholder="Ej: Cuál es el horario de la piscina">
+                </div>
+                <!-- CAMBIO: Campo para la respuesta añadido -->
+                <div class="mb-3">
+                    <label for="respuesta_base" class="form-label">Respuesta</label>
+                    <textarea class="form-control" id="respuesta_base" name="respuesta_base" rows="2" placeholder="Ej: La piscina abre de 9 a 18 hs."></textarea>
+                </div>
+                <div class="button-wrapper">
+                    <!-- CAMBIO: Botón deshabilitado por defecto -->
+                    <button type="submit" class="btn btn-info" id="btnGenerar" disabled>Generar Nueva Consulta</button>
+                    <div class="loader" id="generarLoader" style="display: none;"></div>
+                </div>
+            </form>
+            <div id="alerta-generacion" class="mt-3 alert" style="display: none;"></div>
+        </div>
+
+        <!-- Sección para Editar Respuestas (Desplegable) -->
+        <div class="form-section">
+            <details open>
+                <summary>Editar Respuestas</summary>
+                <div class="details-content">
+                    <form id="respuestasForm">
+                        <div id="respuestasContainer">
+                            {% for clave, texto_respuesta in respuestas.items() %}
+                            <div class="response-item" id="consulta-{{ clave }}">
+                                <div class="query-header">
+                                    <h5 class="query-title">{{ lang.get(clave, 'Pregunta no encontrada (' + clave + ')') }}</h5>
+                                    <button type="button" class="btn-icon-delete" data-clave="{{ clave }}">
+                                        <span class="material-symbols-outlined">delete_forever</span>
+                                    </button>
+                                </div>
+                                <div>
+                                    <label class="form-label fw-bold">Respuesta del Bot</label>
+                                    <textarea class="form-control" name="resp_{{ clave }}" rows="2">{{ texto_respuesta }}</textarea>
+                                </div>
+                            </div>
+                            {% else %}
+                            <p class="text-muted">No hay consultas definidas para esta instancia.</p>
+                            {% endfor %}
+                        </div>
+                    </form>
+                    <div id="alerta" class="mt-3 alert" style="display: none;"></div>
+                </div>
+            </details>
+        </div>
+
+        <!-- Sección para Importar Base de Conocimiento -->
+        <div class="form-section no-border">
+            <h2>Importar Base de Conocimiento (IA)</h2>
+            <form id="uploadForm" enctype="multipart/form-data">
+                <label for="info_file" class="form-label">Selecciona un archivo <code>.txt</code></label>
+                <div class="file-input-container">
+                    <div class="custom-file-input">
+                        <input type="file" id="info_file" name="info_file" accept=".txt" required>
+                        <label for="info_file" class="file-input-label">
+                            <span class="file-name-display">Ningún archivo seleccionado...</span>
+                            <span class="file-browse-button">Explorar</span>
+                        </label>
+                    </div>
+                    <button type="submit" class="btn-icon-upload" id="btnUpload" title="Subir archivo">
+                        <span class="material-symbols-outlined">upload</span>
+                    </button>
+                </div>
+            </form>
+            <div id="alerta-upload" class="mt-3 alert" style="display: none;"></div>
+        </div>
+
+        <!-- Botón de Guardar Configuración General -->
+        <div class="button-group main-submit-group">
+            <button type="submit" form="respuestasForm" class="btn btn-success" id="btnGuardar">Guardar Configuración</button>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const instanceId = {{ instance_id }};
+
+            // --- Función para mostrar alertas de error contextuales ---
+            function showAlert(elementId, message) {
+                const alertElement = document.getElementById(elementId);
+                alertElement.textContent = message;
+                alertElement.className = 'alert alert-danger';
+                alertElement.style.display = 'block';
+                setTimeout(() => {
+                    alertElement.style.display = 'none';
+                }, 4000);
+            }
+            
+            // --- Función para notificaciones animadas de éxito ---
+            function showNotification(message, type = 'success') {
+                const container = document.getElementById('notification-container');
+                if (!container) return;
+
+                const notification = document.createElement('div');
+                notification.className = `toast-notification ${type}`;
+                notification.textContent = message;
+
+                container.appendChild(notification);
+                
+                setTimeout(() => {
+                    notification.classList.add('hide');
+                    notification.addEventListener('animationend', () => {
+                        notification.remove();
+                    });
+                }, 3000);
+            }
+
+            // --- Función para mostrar modal de confirmación personalizado ---
+            function showCustomConfirm(message, onConfirm) {
+                const overlay = document.createElement('div');
+                overlay.className = 'custom-modal-overlay';
+
+                overlay.innerHTML = `
+                    <div class="custom-modal-content">
+                        <p>${message}</p>
+                        <div class="custom-modal-buttons">
+                            <button class="confirm-btn">Confirmar</button>
+                            <button class="cancel-btn">Cancelar</button>
+                        </div>
+                    </div>
+                `;
+
+                const confirmBtn = overlay.querySelector('.confirm-btn');
+                const cancelBtn = overlay.querySelector('.cancel-btn');
+
+                confirmBtn.onclick = () => {
+                    onConfirm();
+                    overlay.remove();
+                };
+
+                cancelBtn.onclick = () => {
+                    overlay.remove();
+                };
+
+                document.body.appendChild(overlay);
+            }
+
+
+            // --- 1. Guardar Respuestas y Tema ---
+            document.getElementById('respuestasForm').addEventListener('submit', async function (e) {
+                e.preventDefault();
+                const formData = new FormData(this);
+                const respuestas = {};
+                for (let [key, value] of formData.entries()) {
+                    if (key.startsWith('resp_')) {
+                        respuestas[key.substring(5)] = value;
+                    }
+                }
+                
+                const selectedTheme = document.getElementById('theme_selector').value;
+
+                const payload = {
+                    respuestas: respuestas,
+                    theme: selectedTheme
+                };
+
+                try {
+                    const response = await fetch(`/${instanceId}/admin/guardar`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+                    const result = await response.json();
+                    if (response.ok) {
+                        showNotification('¡Configuración guardada con éxito!');
+                        setTimeout(() => location.reload(), 1000);
+                    } else {
+                        throw new Error(result.message || 'Error desconocido');
+                    }
+                } catch (error) {
+                    showAlert('alerta', `Error al guardar: ${error.message}`);
+                }
+            });
+
+            // --- 2. Generar Nueva Consulta ---
+            // CAMBIO: Lógica para habilitar/deshabilitar el botón de generar
+            const fraseBaseInput = document.getElementById('frase_base');
+            const respuestaBaseInput = document.getElementById('respuesta_base');
+            const generarBtn = document.getElementById('btnGenerar');
+
+            function toggleGenerarButtonState() {
+                const isFraseEmpty = fraseBaseInput.value.trim() === '';
+                const isRespuestaEmpty = respuestaBaseInput.value.trim() === '';
+                generarBtn.disabled = isFraseEmpty || isRespuestaEmpty;
+            }
+
+            fraseBaseInput.addEventListener('input', toggleGenerarButtonState);
+            respuestaBaseInput.addEventListener('input', toggleGenerarButtonState);
+            
+            document.getElementById('generarForm').addEventListener('submit', async function(e) {
+                e.preventDefault();
+                const fraseBase = fraseBaseInput.value;
+                const respuestaBase = respuestaBaseInput.value;
+
+                const generarLoader = document.getElementById('generarLoader');
+
+                generarBtn.style.display = 'none';
+                generarLoader.style.display = 'block';
+
+                try {
+                    const response = await fetch(`/${instanceId}/admin/generar`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        // CAMBIO: Enviar la pregunta y la respuesta
+                        body: JSON.stringify({ 
+                            frase_base: fraseBase,
+                            respuesta_base: respuestaBase
+                        })
+                    });
+                    const result = await response.json();
+                    if (response.ok) {
+                        setTimeout(() => location.reload(), 500);
+                    } else {
+                        throw new Error(result.detail || 'Error en el servidor');
+                    }
+                } catch (error) {
+                    showAlert('alerta-generacion', `Error al generar: ${error.message}`);
+                    generarBtn.style.display = 'block';
+                    generarLoader.style.display = 'none';
+                }
+            });
+
+            // --- 3. Eliminar Consulta ---
+            document.querySelectorAll('.btn-icon-delete').forEach(button => {
+                button.addEventListener('click', function () {
+                    const claveQ = this.dataset.clave;
+                    showCustomConfirm(`¿Estás seguro de que quieres eliminar la consulta ${claveQ} y todos sus datos asociados?`, async () => {
+                        try {
+                            const response = await fetch(`/${instanceId}/admin/eliminar/${claveQ}`, {
+                                method: 'DELETE'
+                            });
+                            const result = await response.json();
+                            if (response.ok) {
+                                document.getElementById(`consulta-${claveQ}`).remove();
+                                showNotification(`Consulta ${claveQ} eliminada.`);
+                            } else {
+                                throw new Error(result.detail || 'Error al eliminar');
+                            }
+                        } catch (error) {
+                            showAlert('alerta', `Error: ${error.message}`);
+                        }
+                    });
+                });
+            });
+
+            // --- 4. Subir Archivo de Conocimiento ---
+            const uploadForm = document.getElementById('uploadForm');
+            const fileInput = document.getElementById('info_file');
+            const fileNameDisplay = document.querySelector('.file-name-display');
+
+            fileInput.addEventListener('change', () => {
+                fileNameDisplay.textContent = fileInput.files.length > 0 ? fileInput.files[0].name : 'Ningún archivo seleccionado...';
+            });
+
+            uploadForm.addEventListener('submit', async function(e) {
+                e.preventDefault();
+                if (fileInput.files.length === 0) {
+                    showAlert('alerta-upload', 'Por favor, selecciona un archivo .txt para subir.');
+                    return;
+                }
+                const formData = new FormData();
+                formData.append('file', fileInput.files[0]);
+
+                try {
+                    const response = await fetch(`/${instanceId}/admin/upload_info`, {
+                        method: 'POST',
+                        body: formData
+                    });
+                    const result = await response.json();
+                    if (response.ok) {
+                        showNotification(result.message);
+                    } else {
+                        throw new Error(result.detail || 'Error al subir el archivo');
+                    }
+                } catch (error) {
+                    showAlert('alerta-upload', `Error: ${error.message}`);
+                }
+            });
+        });
+    </script>
+</body>
+</html>
+
+```
+
+--------------------------------------------------------------------------------
+
+
+--- Archivo: templates\index.html ---
+
+### Rol del archivo: [AÑADIR AQUÍ UNA BREVE DESCRIPCIÓN MANUAL DEL ARCHIVO]
+
+```
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>{{ langui.get("ChatTitle", "Asistente Virtual") }}</title>
+    
+    <!-- Importar la fuente IBM Plex Sans -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
+
+    <!-- 1. Carga la ESTRUCTURA base del chat -->
+    <link rel="stylesheet" href="/static/Base/base-index.css">
+    
+    <!-- 2. Carga los COLORES Y FUENTES del tema seleccionado dinámicamente -->
+    <link rel="stylesheet" href="/static/Themes/{{ selected_theme }}/theme.css">
+
+</head>
+<body>
+    <!-- El enlace al admin ahora es un ícono de engranaje -->
+    <a href="/{{ instance_id }}/admin" class="admin-icon" title="Panel de administración">
+        <span class="material-symbols-outlined">settings</span>
+    </a>
+
+    <div class="chat-container">
+        <div class="chat-header">{{ langui.get("ChatHeader", "Bienvenido al chat") }}</div>
+        <div id="chat-log" class="chat-log"></div>
+        <div class="chat-input">
+            <input type="text" id="consulta" placeholder="{{ langui.get('Escriba', 'Escriba su mensaje...') }}">
+            <button id="btnEnviar">{{ langui.get('Enviar', 'Enviar') }}</button>
+        </div>
+    </div>
+
+    <script>
+        const input = document.getElementById("consulta");
+        const btnEnviar = document.getElementById("btnEnviar");
+        const instanceId = {{ instance_id }};
+
+        btnEnviar.addEventListener("click", enviarConsulta);
+
+        async function enviarConsulta() {
+            const mensaje = input.value.trim();
+            if (!mensaje) return;
+
+            agregarMensaje("Tú", mensaje);
+            input.value = "";
+
+            const escribiendoMsg = agregarLoader();
+
+            try {
+                const response = await fetch(`/${instanceId}/consulta`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ consulta: mensaje })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`Error del servidor: ${response.statusText}`);
+                }
+
+                const data = await response.json();
+                escribiendoMsg.querySelector(".burbuja").textContent = data.respuesta;
+            } catch (error) {
+                console.error("Error en fetch:", error);
+                escribiendoMsg.querySelector(".burbuja").textContent = "Error al obtener respuesta.";
+            }
+
+            input.focus();
+        }
+
+        function agregarMensaje(remitente, texto) {
+            const log = document.getElementById("chat-log");
+            const msg = document.createElement("div");
+            msg.className = "mensaje fade " + (remitente === "Tú" ? "usuario" : "bot");
+            const bubble = document.createElement("div");
+            bubble.className = "burbuja";
+            bubble.textContent = texto;
+            msg.appendChild(bubble);
+            log.appendChild(msg);
+            log.scrollTop = log.scrollHeight;
+            return msg;
+        }
+
+        function agregarLoader() {
+            const log = document.getElementById("chat-log");
+            const msg = document.createElement("div");
+            msg.className = "mensaje fade bot";
+            const bubble = document.createElement("div");
+            bubble.className = "burbuja";
+            const loader = document.createElement("div");
+            loader.className = "loader";
+            bubble.appendChild(loader);
+            msg.appendChild(bubble);
+            log.appendChild(msg);
+            log.scrollTop = log.scrollHeight;
+            return msg;
+        }
+
+        input.addEventListener("keydown", function(event) {
+            if (event.key === "Enter") {
+                event.preventDefault();
+                enviarConsulta();
+            }
+        });
+
+        window.onload = () => input.focus();
+    </script>
+</body>
+</html>
+
+```
+
+--------------------------------------------------------------------------------
+
+
+--- Archivo: ✘[!] Eliminar base de datos.py ---
+
+### Rol del archivo: [AÑADIR AQUÍ UNA BREVE DESCRIPCIÓN MANUAL DEL ARCHIVO]
+
+```
+import os
+import json
+import glob
+import shutil
+
+def pedir_id_instancia():
+    """Pide al usuario el ID de la instancia y valida que exista."""
+    while True:
+        instance_id = input("🆔 Introduce el ID de la instancia que quieres eliminar (ej. 1): ").strip()
+        if instance_id.isdigit():
+            instance_path = os.path.join(os.getcwd(), "Instancias", instance_id)
+            if os.path.isdir(instance_path):
+                return instance_id, instance_path
+            else:
+                print(f"❌ La carpeta para la instancia '{instance_id}' no existe en 'Instancias/'.")
+        else:
+            print("❌ Por favor, introduce un número válido.")
+
+def confirmar(instance_id):
+    """Pide confirmación al usuario de forma clara para una instancia específica."""
+    print(f"\n⚠️  ADVERTENCIA: Esta acción es irreversible y eliminará los siguientes datos DE LA INSTANCIA '{instance_id}':")
+    print("    - Todos los archivos en la carpeta 'Consultas'")
+    print("    - Todos los archivos en la carpeta 'Training'")
+    print("    - El archivo 'Respuestas.json'")
+    print("    - El archivo 'Lang.json'")
+    
+    respuesta = input("\n    ¿Estás completamente seguro de que quieres continuar? (s/n): ").strip().lower()
+    return respuesta == "s"
+
+def limpiar_carpeta(ruta_carpeta):
+    """Borra de forma segura todos los archivos y subcarpetas de una carpeta."""
+    nombre_carpeta = os.path.basename(ruta_carpeta)
+    print(f"\n--- Limpiando carpeta: '{nombre_carpeta}' ---")
+    if not os.path.isdir(ruta_carpeta):
+        print(f"📂 Información: La carpeta no existe. No hay nada que limpiar.")
+        return
+
+    elementos = glob.glob(os.path.join(ruta_carpeta, "*"))
+    if not elementos:
+        print("✅ La carpeta ya está vacía.")
+        return
+
+    for ruta_elemento in elementos:
+        try:
+            if os.path.isfile(ruta_elemento) or os.path.islink(ruta_elemento):
+                os.remove(ruta_elemento)
+                print(f"🗑️ Archivo eliminado: {os.path.relpath(ruta_elemento)}")
+            elif os.path.isdir(ruta_elemento):
+                shutil.rmtree(ruta_elemento)
+                print(f"🗑️ Carpeta eliminada: {os.path.relpath(ruta_elemento)}")
+        except Exception as e:
+            print(f"❌ ERROR al eliminar '{ruta_elemento}': {e}")
+
+def eliminar_archivo(ruta_archivo):
+    """Elimina un archivo de forma segura."""
+    nombre_archivo = os.path.basename(ruta_archivo)
+    print(f"\n--- Intentando eliminar archivo: '{nombre_archivo}' ---")
+    if not os.path.isfile(ruta_archivo):
+        print(f"📄 Información: El archivo no existe. No hay nada que eliminar.")
+        return
+    
+    try:
+        os.remove(ruta_archivo)
+        print(f"🗑️ Archivo eliminado: {nombre_archivo}")
+    except Exception as e:
+        print(f"❌ ERROR al eliminar '{nombre_archivo}': {e}")
+
+def main():
+    os.chdir(os.path.dirname(os.path.abspath(__file__)))
+    print(f"📍 Ejecutando en el directorio: {os.getcwd()}\n")
+
+    instance_id, instance_path = pedir_id_instancia()
+
+    if confirmar(instance_id):
+        print(f"\n🚨 Iniciando proceso de eliminación total para la instancia '{instance_id}'...\n")
+        
+        # Rutas específicas de la instancia
+        ruta_consultas = os.path.join(instance_path, "Consultas")
+        ruta_training = os.path.join(instance_path, "Training")
+        ruta_respuestas = os.path.join(instance_path, "Respuestas.json")
+        ruta_lang = os.path.join(instance_path, "Lang.json")
+        
+        limpiar_carpeta(ruta_consultas)
+        limpiar_carpeta(ruta_training)
+        eliminar_archivo(ruta_respuestas)
+        eliminar_archivo(ruta_lang)
+        
+        print("\n✅ Proceso de eliminación finalizado.")
+    else:
+        print("\n❌ Operación cancelada por el usuario.")
+    
+    input("\nPresiona Enter para salir...")
+
+if __name__ == "__main__":
+    main()
+
+```
+
+--------------------------------------------------------------------------------

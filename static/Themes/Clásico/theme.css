@@ -1,0 +1,66 @@
+/* static/Themes/Clasico/theme.css */
+:root {
+    /* --- Tipografía --- */
+    --font-principal: 'IBM Plex Sans', sans-serif; /* CORREGIDO: Fuente unificada */
+
+    /* --- Colores Base (Paleta Clásico) --- */
+    --color-fondo: #008080;             /* Verde azulado de escritorio (para fondo de chat) */
+    --color-contenedor: #C0C0C0;        /* Gris de ventana estándar (para contenedor de chat) */
+    --color-fondo-oscuro: #008080;       /* Mismo verde azulado (para fondo de admin) */
+    --color-fondo-claro: #C0C0C0;        /* Mismo gris (para contenedor de admin) */
+    --color-borde: #808080;              /* Borde oscuro para efecto 3D */
+    --color-texto-principal: #000000;    /* Texto principal negro */
+    --color-texto-secundario: #000000;   /* Texto secundario negro */
+    
+    /* --- Colores de Acento --- */
+    --color-primario: #000080;           /* Azul de barra de título */
+    --color-primario-hover: #0000A0;
+    --color-primario-activo: #000050;
+
+    /* === COLORES DE BURBUJA ADAPTADOS === */
+    --color-burbuja-bot: #000080; 
+    --color-burbuja-usuario: #800080; 
+
+    /* --- Colores de Inputs y Texto --- */
+    --color-input-fondo: #FFFFFF;        /* Fondo de input blanco */
+    --color-input-texto: #000000;        /* Texto de input negro */
+    --color-texto-blanco: #FFFFFF;
+    
+    /* --- Otros colores funcionales (para admin y chat) --- */
+    --sombra-caja: 2px 2px 0px rgba(0,0,0,0.4); /* Sombra dura para efecto retro */
+    --color-exito: #008000;
+    --color-exito-hover: #00A000;
+    --color-exito-activo: #005000;
+    --color-peligro: #800000;
+    --color-peligro-hover: #A00000;
+    --color-peligro-activo: #500000;
+    --color-mensaje-exito-fondo: #D4EDDA;
+    --color-mensaje-exito-borde: #C3E6CB;
+    --color-mensaje-error-fondo: #F8D7DA;
+    --color-mensaje-error-borde: #F5C6CB;
+    
+    /* CAMBIO: Variable de color traída desde la agenda */
+    --color-admin-panel-item-fondo: #E0E0E0; /* Gris claro para items en admin */
+}
+
+/* --- Sobrescritura para Admin Panel --- */
+/* Asegura que los campos de input en el admin usen el fondo blanco definido */
+.container input[type="text"],
+.container input[type="number"],
+.container input[type="date"],
+.container input[type="time"],
+.container select,
+.custom-file-input .file-input-label {
+    background-color: var(--color-input-fondo) !important;
+    color: var(--color-texto-principal) !important;
+}
+
+/* Flecha negra para el desplegable en el tema Clásico */
+.container select, .container .form-select {
+    background-image: url("data:image/svg+xml;utf8,<svg fill='black' height='20' viewBox='0 0 24 24' width='20' xmlns='http://www.w3.org/2000/svg'><path d='M7 10l5 5 5-5z'/></svg>") !important;
+}
+
+/* CAMBIO: Regla actualizada para usar el nuevo color */
+.response-item {
+    background-color: var(--color-admin-panel-item-fondo);
+}
