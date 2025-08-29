@@ -30,7 +30,7 @@
       "pileta": ["piscina", "alberca"],
       "hotel": ["alojamiento", "establecimiento", "hospedaje"],
       "habitaciones": ["cuartos", "dormitorios", "alcobas"],
-      "habitacion": ["cuarto", "dormitorio", "alcoba"]
+      "habitacion": ["cuarto", "dormitorio", "alcoba", "pieza", "suite"]
     },
     "sustantivos_conceptos": {
       "informacion": ["datos", "detalles", "referencias"],

@@ -13,9 +13,12 @@ A continuación, se listan todos los archivos incluidos en este documento:
 - Exclusiones.json
 - GENERAR NUEVA FRASE.bat
 - Generador.py
+- Instancias\10\Respuestas.json
+- Instancias\10\config.json
 - Instancias\1\Lang.json
 - Instancias\1\Respuestas.json
 - Instancias\1\config.json
+- Instancias\2\Lang.json
 - Instancias\2\Respuestas.json
 - Instancias\2\config.json
 - LangUI.json
@@ -270,7 +273,7 @@ if __name__ == "__main__":
       "pileta": ["piscina", "alberca"],
       "hotel": ["alojamiento", "establecimiento", "hospedaje"],
       "habitaciones": ["cuartos", "dormitorios", "alcobas"],
-      "habitacion": ["cuarto", "dormitorio", "alcoba"]
+      "habitacion": ["cuarto", "dormitorio", "alcoba", "pieza", "suite"]
     },
     "sustantivos_conceptos": {
       "informacion": ["datos", "detalles", "referencias"],
@@ -569,13 +572,39 @@ if __name__ == "__main__":
 --------------------------------------------------------------------------------
 
 
+--- Archivo: Instancias\10\Respuestas.json ---
+
+### Rol del archivo: [AÑADIR AQUÍ UNA BREVE DESCRIPCIÓN MANUAL DEL ARCHIVO]
+
+```
+{
+  "Respuestas": {}
+}
+```
+
+--------------------------------------------------------------------------------
+
+
+--- Archivo: Instancias\10\config.json ---
+
+### Rol del archivo: [AÑADIR AQUÍ UNA BREVE DESCRIPCIÓN MANUAL DEL ARCHIVO]
+
+```
+{
+  "theme": "Art Pop"
+}
+```
+
+--------------------------------------------------------------------------------
+
+
 --- Archivo: Instancias\1\Lang.json ---
 
 ### Rol del archivo: [AÑADIR AQUÍ UNA BREVE DESCRIPCIÓN MANUAL DEL ARCHIVO]
 
 ```
 {
-  "Q2": "¿Cuál es el horario de la piscina?"
+  "Q1": "¿Cuál es el horario de la piscina?"
 }
 ```
 
@@ -589,7 +618,7 @@ if __name__ == "__main__":
 ```
 {
   "Respuestas": {
-    "Q2": "Ya"
+    "Q1": "La piscina abre a las 13hs."
   }
 }
 ```
@@ -603,7 +632,20 @@ if __name__ == "__main__":
 
 ```
 {
-  "theme": "Clásico"
+  "theme": "Claro"
+}
+```
+
+--------------------------------------------------------------------------------
+
+
+--- Archivo: Instancias\2\Lang.json ---
+
+### Rol del archivo: [AÑADIR AQUÍ UNA BREVE DESCRIPCIÓN MANUAL DEL ARCHIVO]
+
+```
+{
+  "Q2": "¿Cuál es el horario de la piscina?"
 }
 ```
 
@@ -616,7 +658,9 @@ if __name__ == "__main__":
 
 ```
 {
-  "Respuestas": {}
+  "Respuestas": {
+    "Q2": "AHORA"
+  }
 }
 ```
 
@@ -845,47 +889,60 @@ class AIResponder:
     def answer_question(self, question, top_k=5, score_threshold=0.30, title_boost=0.25):
         """
         Busca una respuesta combinando búsqueda semántica con un impulso de puntuación
-        para las coincidencias de título, solucionando el sesgo hacia fragmentos más largos.
+        para las coincidencias de título y devuelve información de depuración.
         """
-        if self.corpus_embeddings is None or not self.corpus_chunks: return None
+        if self.corpus_embeddings is None or not self.corpus_chunks:
+            return None, []
 
         question_embedding = self.model.encode(question, convert_to_tensor=True, device=self.device)
         
         hits = util.semantic_search(question_embedding, self.corpus_embeddings, top_k=top_k)[0]
         
         if not hits:
-            return None
+            return None, []
 
-        # --- Lógica de Re-ranking con Impulso de Título ---
         boosted_hits = []
         normalized_question_words = set(self._normalize_for_boost(question).split())
 
         for hit in hits:
             chunk_text = self.corpus_chunks[hit['corpus_id']]
-            # Considera las primeras 7 palabras como el "título" del fragmento
             chunk_title_words = set(self._normalize_for_boost(chunk_text).split()[:7])
             
-            # Si TODAS las palabras de la consulta están en el título del fragmento, aplica un impulso fuerte
+            modifier = "Normal"
+            boosted_score = hit['score']
             if normalized_question_words.issubset(chunk_title_words):
-                boosted_score = hit['score'] + title_boost
+                boosted_score += title_boost
+                modifier = f"Title Boost (+{title_boost:.2f})"
                 print(f"🚀 Impulso FUERTE aplicado a '{chunk_text[:30]}...' de {hit['score']:.2f} a {boosted_score:.2f}")
-                hit['score'] = boosted_score
             
-            boosted_hits.append(hit)
+            boosted_hits.append({
+                'corpus_id': hit['corpus_id'],
+                'score': boosted_score,
+                'original_score': hit['score'],
+                'modifier': modifier
+            })
 
-        # Vuelve a ordenar los resultados con las puntuaciones actualizadas
         sorted_hits = sorted(boosted_hits, key=lambda x: x['score'], reverse=True)
+
+        # Prepara la información de depuración con los 2 mejores resultados
+        debug_info = []
+        for hit in sorted_hits[:2]:
+            debug_info.append({
+                "match": self.corpus_chunks[hit['corpus_id']],
+                "score": f"{hit['score']:.4f}",
+                "modifier": hit['modifier']
+            })
 
         print(f"🔍 Resultados Re-clasificados: {[ (h['score'], self.corpus_chunks[h['corpus_id']][:40] + '...') for h in sorted_hits]}")
 
-        # Devuelve el mejor resultado si supera el umbral de confianza
         best_hit = sorted_hits[0]
         if best_hit['score'] > score_threshold:
             print(f"✅ Coincidencia final encontrada con puntaje {best_hit['score']:.2f}")
-            return self.corpus_chunks[best_hit['corpus_id']]
+            return self.corpus_chunks[best_hit['corpus_id']], debug_info
         
         print(f"❌ Ninguna coincidencia superó el umbral de {score_threshold}. La mejor fue de {best_hit['score']:.2f}")
-        return None
+        return None, debug_info
+
 
 class ValidadorConsultas:
     """
@@ -930,11 +987,14 @@ class ValidadorConsultas:
         return SequenceMatcher(None, texto1, texto2).ratio()
 
     def buscar_coincidencia_reglas(self, consulta):
+        """
+        Busca coincidencias y devuelve las 2 mejores junto con información de depuración.
+        """
         consulta_norm = self.normalizar_texto(consulta)
-        mejor_coincidencia = {"puntaje": 0}
+        todas_las_coincidencias = []
         
         carpeta_consultas = os.path.join(self.instance_path, "Consultas")
-        if not os.path.isdir(carpeta_consultas): return None
+        if not os.path.isdir(carpeta_consultas): return None, []
 
         for archivo_path in glob.glob(os.path.join(carpeta_consultas, "*.json")):
             try:
@@ -944,12 +1004,36 @@ class ValidadorConsultas:
                 for variante in variantes:
                     variante_norm = self.normalizar_texto(variante, False)
                     similitud = self.comparar_textos(consulta_norm, variante_norm)
-                    if similitud > mejor_coincidencia["puntaje"]:
-                        mejor_coincidencia = {"variante": variante, "archivo": archivo_path, "puntaje": similitud}
+                    todas_las_coincidencias.append({
+                        "variante": variante, 
+                        "archivo": archivo_path, 
+                        "score": similitud
+                    })
             except (json.JSONDecodeError, FileNotFoundError):
                 continue
         
-        return mejor_coincidencia if mejor_coincidencia["puntaje"] > 0.65 else None
+        # Ordenar todas las coincidencias por puntaje
+        coincidencias_ordenadas = sorted(todas_las_coincidencias, key=lambda x: x['score'], reverse=True)
+        
+        # Preparar la información de depuración con los 2 mejores
+        debug_info = []
+        for match in coincidencias_ordenadas[:2]:
+            qid_match = re.search(r"\((Q\d+)\)", match['archivo'])
+            qid = qid_match.group(1) if qid_match else "N/A"
+            debug_info.append({
+                "match": match['variante'],
+                "score": f"{match['score']:.4f}",
+                "modifier": "SequenceMatcher",
+                "qid": qid 
+            })
+
+        mejor_coincidencia = coincidencias_ordenadas[0] if coincidencias_ordenadas else None
+        
+        if mejor_coincidencia and mejor_coincidencia["score"] > 0.65:
+            return mejor_coincidencia, debug_info
+        else:
+            return None, debug_info
+
 
     def obtener_respuesta_reglas(self, archivo):
         match = re.search(r"\((Q\d+)\)", archivo)
@@ -959,22 +1043,49 @@ class ValidadorConsultas:
         return None
 
     def procesar_consulta(self, consulta):
+        """
+        Procesa la consulta y devuelve la respuesta junto con un diccionario de depuración.
+        """
+        debug_info = {
+            "query": consulta,
+            "rules": [],
+            "ai": []
+        }
+
         if not os.path.isdir(self.instance_path):
             langui = self._load_json_global("LangUI.json")
-            return langui.get("NoSabe", "No he podido encontrar una respuesta.")
+            return langui.get("NoSabe", "No he podido encontrar una respuesta."), debug_info
 
-        resultado_reglas = self.buscar_coincidencia_reglas(consulta)
+        # Capa 1: Reglas
+        resultado_reglas, debug_reglas = self.buscar_coincidencia_reglas(consulta)
+        debug_info["rules"] = debug_reglas
+        
         langui = self._load_json_global("LangUI.json")
         
         if resultado_reglas:
             respuesta = self.obtener_respuesta_reglas(resultado_reglas["archivo"])
-            return respuesta or langui.get("NoSabe", "Respuesta para la regla no encontrada.")
+            # --- INICIO DE LA CORRECCIÓN ---
+            print("\n--- DEBUG INFO ---")
+            print(json.dumps(debug_info, indent=2, ensure_ascii=False))
+            print("--- END DEBUG INFO ---\n")
+            # --- FIN DE LA CORRECCIÓN ---
+            return respuesta or langui.get("NoSabe", "Respuesta para la regla no encontrada."), debug_info
         
-        respuesta_ia = self.ai_responder.answer_question(consulta)
+        # Capa 2: IA
+        respuesta_ia, debug_ia = self.ai_responder.answer_question(consulta)
+        debug_info["ai"] = debug_ia
+        
+        # --- INICIO DE LA CORRECCIÓN ---
+        print("\n--- DEBUG INFO ---")
+        print(json.dumps(debug_info, indent=2, ensure_ascii=False))
+        print("--- END DEBUG INFO ---\n")
+        # --- FIN DE LA CORRECCIÓN ---
+
         if respuesta_ia:
-            return respuesta_ia
+            return respuesta_ia, debug_info
         
-        return langui.get("NoSabe", "No he podido encontrar una respuesta.")
+        return langui.get("NoSabe", "No he podido encontrar una respuesta."), debug_info
+
 
 # --- Dos cachés separadas para la IA y las reglas ---
 ai_responders_cache = {}
@@ -1015,8 +1126,9 @@ async def read_root(request: Request, instance_id: int):
 async def consulta(instance_id: int, data: dict):
     validador = get_validador(instance_id)
     consulta_texto = data.get("consulta", "")
-    respuesta = validador.procesar_consulta(consulta_texto)
-    return JSONResponse({"respuesta": respuesta})
+    respuesta, debug_info = validador.procesar_consulta(consulta_texto)
+    return JSONResponse({"respuesta": respuesta, "debug_info": debug_info})
+
 
 @app.get("/{instance_id}/admin", response_class=HTMLResponse)
 async def admin(request: Request, instance_id: int):
@@ -1045,24 +1157,33 @@ async def admin(request: Request, instance_id: int):
 @app.post("/{instance_id}/admin/guardar")
 async def guardar_configuracion(instance_id: int, data: dict):
     instance_path = os.path.join("Instancias", str(instance_id))
-    if not os.path.isdir(instance_path):
-        raise HTTPException(status_code=404, detail=f"La instancia {instance_id} no existe.")
+    # --- INICIO DE LA CORRECCIÓN ---
+    # Asegurarse de que el directorio de la instancia exista antes de cualquier operación
+    os.makedirs(instance_path, exist_ok=True)
+    # --- FIN DE LA CORRECCIÓN ---
 
     try:
         if "respuestas" in data:
             nuevas_respuestas = data.get("respuestas", {})
             respuestas_path = os.path.join(instance_path, "Respuestas.json")
             respuestas_data = {"Respuestas": {}}
+            
+            # --- INICIO DE LA CORRECCIÓN ---
+            # Cargar datos solo si el archivo ya existe
             if os.path.exists(respuestas_path):
                 with open(respuestas_path, 'r', encoding='utf-8') as f:
                     try:
                         respuestas_data = json.load(f)
                     except json.JSONDecodeError:
-                        pass
+                        # Si el archivo está corrupto o vacío, se empieza de cero
+                        pass 
+            # --- FIN DE LA CORRECCIÓN ---
             
-            if "Respuestas" not in respuestas_data or not isinstance(respuestas_data["Respuestas"], dict):
+            if "Respuestas" not in respuestas_data or not isinstance(respuestas_data.get("Respuestas"), dict):
                 respuestas_data["Respuestas"] = {}
+
             respuestas_data["Respuestas"].update(nuevas_respuestas)
+            
             with open(respuestas_path, 'w', encoding='utf-8') as f:
                 json.dump(respuestas_data, f, ensure_ascii=False, indent=2)
 
